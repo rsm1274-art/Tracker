@@ -309,19 +309,19 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
         <div class="form-group">
           <label>Action Plan</label>
           <select id="ap-filter" class="form-control">
-            <option value="all">All Statuses</option><option value="on-schedule">On-Schedule</option><option value="overdue">Overdue</option><option value="pending-corrections">Pending Corrections</option><option value="na">Not Applicable</option>
+            <option value="all">All Statuses</option><option value="on-schedule">On-Schedule</option><option value="overdue">Overdue</option><option value="corrections-required">Corrections Required</option><option value="na">Not Applicable</option>
           </select>
         </div>
         <div class="form-group">
           <label>3-Month Assessment</label>
           <select id="three-filter" class="form-control">
-            <option value="all">All Statuses</option><option value="on-schedule">On-Schedule</option><option value="overdue">Overdue</option><option value="pending-corrections">Pending Corrections</option><option value="na">Not Applicable</option>
+            <option value="all">All Statuses</option><option value="on-schedule">On-Schedule</option><option value="overdue">Overdue</option><option value="corrections-required">Corrections Required</option><option value="na">Not Applicable</option>
           </select>
         </div>
         <div class="form-group">
           <label>6-Month Assessment</label>
           <select id="six-filter" class="form-control">
-            <option value="all">All Statuses</option><option value="on-schedule">On-Schedule</option><option value="overdue">Overdue</option><option value="pending-corrections">Pending Corrections</option><option value="na">Not Applicable</option>
+            <option value="all">All Statuses</option><option value="on-schedule">On-Schedule</option><option value="overdue">Overdue</option><option value="corrections-required">Corrections Required</option><option value="na">Not Applicable</option>
           </select>
         </div>
 
@@ -649,12 +649,7 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
     }
 
     // --- Performance Metric Calculators ---
- function getTaskStatus(dueStr, compStr, csvComplianceStr, pendingCorrStr) {
-  // 0. Pending Corrections is a workflow override reported directly by the reviewer for this
-  // specific milestone. It takes priority over date math and the static compliance fallback --
-  // a task under correction isn't meaningfully "on-schedule" or "overdue" until the fix lands.
-  if (pendingCorrStr && pendingCorrStr.trim().toLowerCase() === 'yes') return 'Pending Corrections';
-
+ function getTaskStatus(dueStr, compStr, csvComplianceStr) {
   const due = parseDate(dueStr);
   const comp = parseDate(compStr);
 
@@ -808,7 +803,6 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
         const dueDateKey = headers.find(h => h.includes('due date') || h.includes('task: due date')) || 'task: due date';
         const compDateKey = headers.find(h => h.includes('completed date') || h.includes('task: completed date')) || 'task: completed date';
         const compKey = headers.find(h => h.includes('compliance')) || 'compliance';
-        const pendingCorrKey = headers.find(h => h.includes('pending correction'));
 
         const groupings = {};
         normalizedRows.forEach(row => {
@@ -842,26 +836,30 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
             }
           }
 
-          let apDue = '', apComp = '', apCompVal = '', apPendingCorr = '', threeDue = '', threeComp = '', threeCompVal = '', threePendingCorr = '', sixDue = '', sixComp = '', sixCompVal = '', sixPendingCorr = '';
+          let apDue = '', apComp = '', apCompVal = '', threeDue = '', threeComp = '', threeCompVal = '', sixDue = '', sixComp = '', sixCompVal = '';
           // "Extended 3-Month Assessment" / "Extended 6-Month Assessment" supersede their plain
           // counterparts. They are collected separately rather than assigned in place: an extended
           // task type still matches the plain substring test ('extended 3-month' contains '3-month'),
           // so assigning directly would make the winner depend on row order within the file.
-          let threeExtDue = '', threeExtComp = '', threeExtCompVal = '', threeExtPendingCorr = '', threeExtFound = false;
-          let sixExtDue = '', sixExtComp = '', sixExtCompVal = '', sixExtPendingCorr = '', sixExtFound = false;
+          let threeExtDue = '', threeExtComp = '', threeExtCompVal = '', threeExtFound = false;
+          let sixExtDue = '', sixExtComp = '', sixExtCompVal = '', sixExtFound = false;
+          // "Correction(s) Required" is its own Task Type row -- with its own due/completed date --
+          // rather than a flag on an Action Plan/3-Month/6-Month row, and nothing in the source data
+          // says which of those three milestones it corrects.
+          let corrDue = '', corrComp = '', corrCompVal = '', corrFound = false;
           groupRows.forEach(row => {
             const type = (row[taskTypeKey] || '').toString().toLowerCase();
             const isExt = type.includes('extended');
             const due = (row[dueDateKey] || '').toString().trim(), comp = (row[compDateKey] || '').toString().trim(), compVal = (row[compKey] || '').toString().trim();
-            const pendingCorr = pendingCorrKey ? (row[pendingCorrKey] || '').toString().trim() : '';
-            if (type.includes('action plan') || type.includes('actionplan')) { apDue=due; apComp=comp; apCompVal=compVal; apPendingCorr=pendingCorr; }
+            if (type.includes('correction')) { corrDue=due; corrComp=comp; corrCompVal=compVal; corrFound=true; }
+            else if (type.includes('action plan') || type.includes('actionplan')) { apDue=due; apComp=comp; apCompVal=compVal; }
             else if (type.includes('3-month') || type.includes('3month') || type.includes('3 month')) {
-              if (isExt) { threeExtDue=due; threeExtComp=comp; threeExtCompVal=compVal; threeExtPendingCorr=pendingCorr; threeExtFound=true; }
-              else { threeDue=due; threeComp=comp; threeCompVal=compVal; threePendingCorr=pendingCorr; }
+              if (isExt) { threeExtDue=due; threeExtComp=comp; threeExtCompVal=compVal; threeExtFound=true; }
+              else { threeDue=due; threeComp=comp; threeCompVal=compVal; }
             }
             else if (type.includes('6-month') || type.includes('6month') || type.includes('6 month')) {
-              if (isExt) { sixExtDue=due; sixExtComp=comp; sixExtCompVal=compVal; sixExtPendingCorr=pendingCorr; sixExtFound=true; }
-              else { sixDue=due; sixComp=comp; sixCompVal=compVal; sixPendingCorr=pendingCorr; }
+              if (isExt) { sixExtDue=due; sixExtComp=comp; sixExtCompVal=compVal; sixExtFound=true; }
+              else { sixDue=due; sixComp=comp; sixCompVal=compVal; }
             }
           });
 
@@ -869,14 +867,33 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
           let threeExt = false, threeOrigDue = '', threeOrigComp = '', sixExt = false, sixOrigDue = '', sixOrigComp = '';
           if (threeExtFound) {
             threeExt = true; threeOrigDue = threeDue; threeOrigComp = threeComp;
-            threeDue = threeExtDue; threeComp = threeExtComp; threeCompVal = threeExtCompVal; threePendingCorr = threeExtPendingCorr;
+            threeDue = threeExtDue; threeComp = threeExtComp; threeCompVal = threeExtCompVal;
           }
           if (sixExtFound) {
             sixExt = true; sixOrigDue = sixDue; sixOrigComp = sixComp;
-            sixDue = sixExtDue; sixComp = sixExtComp; sixCompVal = sixExtCompVal; sixPendingCorr = sixExtPendingCorr;
+            sixDue = sixExtDue; sixComp = sixExtComp; sixCompVal = sixExtCompVal;
           }
 
-          records.push({ isb: isbNum, workstation: workstation || 'Unknown Unit', reviewer: reviewer || 'Unassigned', dateCreated, dateSent, apDue, apComp, apCompVal, apPendingCorr, threeDue, threeComp, threeCompVal, threePendingCorr, sixDue, sixComp, sixCompVal, sixPendingCorr, threeExt, threeOrigDue, threeOrigComp, sixExt, sixOrigDue, sixOrigComp });
+          // A correction supersedes whichever tracked milestone is currently active for this
+          // incident -- the earliest one still incomplete, or the last one if all are complete --
+          // matching the sequential, one-milestone-at-a-time way these assessments actually run.
+          let apCorr = false, threeCorr = false, sixCorr = false;
+          if (corrFound) {
+            const candidates = [
+              { key: 'ap', due: parseDate(apDue), comp: parseDate(apComp) },
+              { key: 'three', due: parseDate(threeDue), comp: parseDate(threeComp) },
+              { key: 'six', due: parseDate(sixDue), comp: parseDate(sixComp) },
+            ].filter(m => m.due);
+            if (candidates.length) {
+              candidates.sort((a, b) => a.due.getTime() - b.due.getTime());
+              const active = candidates.find(m => !m.comp) || candidates[candidates.length - 1];
+              if (active.key === 'ap') { apDue = corrDue; apComp = corrComp; apCompVal = corrCompVal; apCorr = true; }
+              else if (active.key === 'three') { threeDue = corrDue; threeComp = corrComp; threeCompVal = corrCompVal; threeCorr = true; }
+              else { sixDue = corrDue; sixComp = corrComp; sixCompVal = corrCompVal; sixCorr = true; }
+            }
+          }
+
+          records.push({ isb: isbNum, workstation: workstation || 'Unknown Unit', reviewer: reviewer || 'Unassigned', dateCreated, dateSent, apDue, apComp, apCompVal, apCorr, threeDue, threeComp, threeCompVal, threeCorr, sixDue, sixComp, sixCompVal, sixCorr, threeExt, threeOrigDue, threeOrigComp, sixExt, sixOrigDue, sixOrigComp });
         }
       } else {
         const keysISB = ['isb #', 'isb number', 'isb', 'incident isb', 'incident isb #'];
@@ -902,17 +919,21 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
             apDue: (extract(row, keysAPDue) || '').toString().trim(), apComp: (extract(row, keysAPComp) || '').toString().trim(),
             threeDue: (extract(row, keys3MDue) || '').toString().trim(), threeComp: (extract(row, keys3MComp) || '').toString().trim(),
             sixDue: (extract(row, keys6MDue) || '').toString().trim(), sixComp: (extract(row, keys6MComp) || '').toString().trim(),
-            // The wide layout has no per-milestone Pending Corrections or extended columns, but the record shape must stay uniform.
-            apPendingCorr: '', threePendingCorr: '', sixPendingCorr: '',
+            // The wide layout has no per-milestone Correction(s) Required or extended columns, but the record shape must stay uniform.
+            apCorr: false, threeCorr: false, sixCorr: false,
             threeExt: false, threeOrigDue: '', threeOrigComp: '', sixExt: false, sixOrigDue: '', sixOrigComp: ''
           });
         });
       }
 
       const compiledData = records.map(item => {
-        item.apStatus = getTaskStatus(item.apDue, item.apComp, item.apCompVal, item.apPendingCorr);
-        item.threeStatus = getTaskStatus(item.threeDue, item.threeComp, item.threeCompVal, item.threePendingCorr);
-        item.sixStatus = getTaskStatus(item.sixDue, item.sixComp, item.sixCompVal, item.sixPendingCorr);
+        // A milestone superseded by a Correction(s) Required task type is reported as such
+        // outright rather than run through the normal Overdue/On-Schedule date math -- it's a
+        // workflow state, not a schedule condition -- while still carrying the correction's own
+        // due/completed dates for display, exactly like any other milestone badge.
+        item.apStatus = item.apCorr ? 'Corrections Required' : getTaskStatus(item.apDue, item.apComp, item.apCompVal);
+        item.threeStatus = item.threeCorr ? 'Corrections Required' : getTaskStatus(item.threeDue, item.threeComp, item.threeCompVal);
+        item.sixStatus = item.sixCorr ? 'Corrections Required' : getTaskStatus(item.sixDue, item.sixComp, item.sixCompVal);
         item.apDays = calculateDaysRemaining(item.apDue, item.apComp);
         item.threeDays = calculateDaysRemaining(item.threeDue, item.threeComp);
         item.sixDays = calculateDaysRemaining(item.sixDue, item.sixComp);
@@ -970,7 +991,7 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
         const extMatch = (item.threeExt || item.sixExt) && q.length >= 3 && 'extended'.startsWith(q);
         if (!(item.isb.toLowerCase().includes(q) || item.workstation.toLowerCase().includes(q) || item.reviewer.toLowerCase().includes(q) || extMatch)) return false;
         if (ws && item.workstation !== ws) return false;
-        const gk = s => s === 'On-Schedule' ? 'on-schedule' : (s === 'Overdue' ? 'overdue' : (s === 'Pending Corrections' ? 'pending-corrections' : 'na'));
+        const gk = s => s === 'On-Schedule' ? 'on-schedule' : (s === 'Overdue' ? 'overdue' : (s === 'Corrections Required' ? 'corrections-required' : 'na'));
         if (ap !== 'all' && gk(item.apStatus) !== ap) return false;
         if (three !== 'all' && gk(item.threeStatus) !== three) return false;
         if (six !== 'all' && gk(item.sixStatus) !== six) return false;
@@ -1120,7 +1141,7 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
       pageData.forEach((item, rowIdx) => {
         const tr = document.createElement('tr');
         tr.style.animationDelay = `${Math.min(rowIdx * 0.025, 0.4)}s`;
-        const overPill = item.overallStatus === 'On-Schedule' ? 'success' : (item.overallStatus === 'Overdue' ? 'danger' : (item.overallStatus === 'Pending Corrections' ? 'warning' : 'neutral'));
+        const overPill = item.overallStatus === 'On-Schedule' ? 'success' : (item.overallStatus === 'Overdue' ? 'danger' : (item.overallStatus === 'Corrections Required' ? 'warning' : 'neutral'));
 
         const mkTd = (html, style) => { const td = document.createElement('td'); if (style) td.setAttribute('style', style); td.innerHTML = html; return td; };
         const mkTdText = (text, style) => { const td = document.createElement('td'); if (style) td.setAttribute('style', style); td.textContent = text; return td; };
@@ -1144,7 +1165,7 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
     function renderSubBadge(due, comp, status, ext) {
       const extTag = ext ? `<span class="ext-tag" title="${escapeHtml(buildExtTooltip(ext))}">EXT</span>` : '';
       if (status === 'N/A') return `<div class="sub-badge"><div class="top"><span class="dot" style="background:#cbd5e1;"></span><span style="color:#94a3b8">N/A</span>${extTag}</div></div>`;
-      const isPending = status === 'Pending Corrections';
+      const isPending = status === 'Corrections Required';
       const sCls = status === 'On-Schedule' ? 'var(--success)' : (isPending ? 'var(--warning)' : 'var(--danger)');
       const tCls = status === 'On-Schedule' ? 'text-success' : (isPending ? 'text-warning' : 'text-danger pulse');
       return `
