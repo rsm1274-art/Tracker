@@ -1279,9 +1279,6 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
       // A completed milestone is skipped -- the reviewer has moved past it, even if it was
       // completed late. When every tracked milestone is completed, the last one
       // (newest due date) represents the incident.
-      // Corrections Required sits last in the AP -> 3M -> 6M -> Corrections tie-break order:
-      // it's raised as a follow-up after a reviewer finds a submission deficient, so it
-      // reads as coming after the standard cycle when due dates tie or are missing.
       const milestones = [
         { idx: 0, due: parseDate(item.apDue),    comp: parseDate(item.apComp),    status: item.apStatus },
         { idx: 1, due: parseDate(item.threeDue), comp: parseDate(item.threeComp), status: item.threeStatus },
@@ -1291,23 +1288,22 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
 
       if (milestones.length === 0) return 'N/A';
 
+      // An open Corrections Required task means a submission was already reviewed and sent
+      // back for rework -- that outranks every other milestone's own due-date urgency,
+      // since the record can't move forward until the correction is resolved. It overrides
+      // the label unconditionally while open, even if an earlier milestone (e.g. 6-Month)
+      // is separately overdue. It still counts toward compliance by its own due date (see
+      // getComplianceBucket) -- only the displayed label is neutral.
+      const corrections = milestones.find(m => m.idx === 3);
+      if (corrections && !corrections.comp) return 'Corrections Pending';
+
       // Oldest due date first; undated tracked milestones sort last, ties keep AP->3M->6M order.
       const dueKey = m => m.due ? m.due.getTime() : Infinity;
       milestones.sort((a, b) => (dueKey(a) - dueKey(b)) || (a.idx - b.idx));
 
       // Earliest incomplete milestone drives the status; otherwise the last completed one.
       const active = milestones.find(m => !m.comp);
-      if (!active) return milestones[milestones.length - 1].status;
-
-      // A submission already kicked back for rework reads as "Corrections Pending" rather
-      // than a bare On-Schedule/Overdue -- it's a different kind of state (returned for
-      // rework, not yet resubmitted), worth naming as such. It still counts toward
-      // compliance by its own due date (see getComplianceBucket) -- only the label is
-      // neutral. This applies only when Corrections Required is itself the earliest
-      // incomplete milestone; if an earlier milestone (e.g. 6-Month) is separately overdue,
-      // that's still the more urgent, more accurate thing to surface.
-      if (active.idx === 3) return 'Corrections Pending';
-      return active.status;
+      return active ? active.status : milestones[milestones.length - 1].status;
     }
 
     // The On-Schedule/Overdue bucket used for counting, charting, and coloring --
@@ -1674,6 +1670,8 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
 
     // Mirrors the milestone selection in getOverallStatus() so the aging
     // figures describe the same milestone that set each record's status.
+    // Mirrors getOverallStatus(): the milestone that determines the record's displayed
+    // status and, here, the due date used for its days-overdue figure.
     function getDrivingMilestone(item) {
       const milestones = [
         { idx: 0, label: 'Action Plan',          due: parseDate(item.apDue),    comp: parseDate(item.apComp),    status: item.apStatus },
@@ -1683,6 +1681,10 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
       ].filter(m => m.status && m.status !== 'N/A');
 
       if (milestones.length === 0) return null;
+
+      const corrections = milestones.find(m => m.idx === 3);
+      if (corrections && !corrections.comp) return corrections;
+
       const dueKey = m => m.due ? m.due.getTime() : Infinity;
       milestones.sort((a, b) => (dueKey(a) - dueKey(b)) || (a.idx - b.idx));
       const active = milestones.find(m => !m.comp);
