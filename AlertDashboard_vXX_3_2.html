@@ -419,6 +419,7 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
   .pill.success { background: var(--success-bg); color: var(--success); border-color: var(--success-border); }
   .pill.danger  { background: var(--danger-bg);  color: var(--danger);  border-color: var(--danger-border); }
   .pill.neutral { background: var(--paper-sunk); color: var(--ink-faint); border-color: var(--rule); }
+  .pill.pending { background: var(--warning-bg); color: var(--warning); border-color: var(--warning-border); }
 
   /* ---------- Expand / collapse (Detailed Data Grid) ---------- */
   .caret-col { width: 2.2rem; }
@@ -1296,7 +1297,24 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
 
       // Earliest incomplete milestone drives the status; otherwise the last completed one.
       const active = milestones.find(m => !m.comp);
-      return active ? active.status : milestones[milestones.length - 1].status;
+      if (!active) return milestones[milestones.length - 1].status;
+
+      // A submission already kicked back for rework reads as "Corrections Pending" rather
+      // than a bare On-Schedule/Overdue -- it's a different kind of state (returned for
+      // rework, not yet resubmitted), worth naming as such. It still counts toward
+      // compliance by its own due date (see getComplianceBucket) -- only the label is
+      // neutral. This applies only when Corrections Required is itself the earliest
+      // incomplete milestone; if an earlier milestone (e.g. 6-Month) is separately overdue,
+      // that's still the more urgent, more accurate thing to surface.
+      if (active.idx === 3) return 'Corrections Pending';
+      return active.status;
+    }
+
+    // The On-Schedule/Overdue bucket used for counting, charting, and coloring --
+    // distinct from the "Corrections Pending" label shown on the pill and in exports.
+    // A pending correction still counts by its own due date; only the wording is neutral.
+    function getComplianceBucket(item) {
+      return item.overallStatus === 'Corrections Pending' ? item.corrStatus : item.overallStatus;
     }
 
     // --- File Parser Engine ---
@@ -1622,9 +1640,10 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
     // --- Metrics & Charts ---
     function updateMetrics() {
       // One status per record -- an entry with multiple overdue milestones counts once.
+      // A record showing "Corrections Pending" still counts here by its own due date.
       let overdue = 0, onSchedule = 0, evaluatedRecords = 0;
       state.data.forEach(item => {
-        const s = item.overallStatus;
+        const s = getComplianceBucket(item);
         if (s === 'On-Schedule') { onSchedule++; evaluatedRecords++; }
         else if (s === 'Overdue') { overdue++; evaluatedRecords++; }
       });
@@ -1719,7 +1738,7 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
       // record still lands on the timeline when the sent date was never entered.
       const buckets = {};
       state.data.forEach(item => {
-        const s = item.overallStatus;
+        const s = getComplianceBucket(item);
         if (s !== 'On-Schedule' && s !== 'Overdue') return;
         const d = parseDate(item.dateSent) || parseDate(item.dateCreated);
         if (!d) return;
@@ -1813,7 +1832,7 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
 
       let counted = 0, worst = 0;
       state.data.forEach(item => {
-        if (item.overallStatus !== 'Overdue') return;
+        if (getComplianceBucket(item) !== 'Overdue') return;
         const d = getOverdueDays(item);
         if (d === null) return;
         counted++;
@@ -1906,7 +1925,7 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
       const wsCounts = {};
       state.data.forEach(item => {
         if (!wsCounts[item.workstation]) wsCounts[item.workstation] = { onSchedule: 0, overdue: 0 };
-        const s = item.overallStatus;
+        const s = getComplianceBucket(item);
         if (s === 'On-Schedule') wsCounts[item.workstation].onSchedule++;
         else if (s === 'Overdue') wsCounts[item.workstation].overdue++;
       });
@@ -1990,7 +2009,10 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
         tr.className = 'record-row' + (isExpanded ? ' expanded' : '');
         tr.dataset.isb = item.isb;
         tr.style.animationDelay = `${Math.min(rowIdx * 0.025, 0.4)}s`;
-        const overPill = item.overallStatus === 'On-Schedule' ? 'success' : (item.overallStatus === 'Overdue' ? 'danger' : 'neutral');
+        const overPill = item.overallStatus === 'On-Schedule' ? 'success'
+          : item.overallStatus === 'Overdue' ? 'danger'
+          : item.overallStatus === 'Corrections Pending' ? 'pending'
+          : 'neutral';
 
         const mkTd = (html, style) => { const td = document.createElement('td'); if (style) td.setAttribute('style', style); td.innerHTML = html; return td; };
         const mkTdText = (text, style) => { const td = document.createElement('td'); if (style) td.setAttribute('style', style); td.textContent = text; return td; };
@@ -2110,8 +2132,8 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
         if (!rMap[n]) rMap[n] = { name: n, total: 0, onSchedule: 0, overdue: 0 };
         // Count one representative status per incident: the pending or last completed
         // milestone (6-month > 3-month > Action Plan), via getOverallStatus.
-        const st = getOverallStatus(i);
-        if (st !== 'N/A') { rMap[n].total++; if(st === 'On-Schedule') rMap[n].onSchedule++; else if(st === 'Overdue') rMap[n].overdue++; }
+        const bucket = getComplianceBucket(i);
+        if (bucket !== 'N/A') { rMap[n].total++; if(bucket === 'On-Schedule') rMap[n].onSchedule++; else if(bucket === 'Overdue') rMap[n].overdue++; }
       });
       const list = Object.values(rMap);
       list.forEach(r => r.complianceRate = r.total > 0 ? Math.round((r.onSchedule/r.total)*100) : 100);
@@ -2257,8 +2279,8 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
       state.data.forEach(i => {
         const n = i.reviewer || 'Unassigned'; if (!rMap[n]) rMap[n] = { name: n, t: 0, s: 0, o: 0 };
         // One representative status per incident (pending or last completed milestone).
-        const st = getOverallStatus(i);
-        if (st !== 'N/A') { rMap[n].t++; if(st === 'On-Schedule') rMap[n].s++; else if(st === 'Overdue') rMap[n].o++; }
+        const bucket = getComplianceBucket(i);
+        if (bucket !== 'N/A') { rMap[n].t++; if(bucket === 'On-Schedule') rMap[n].s++; else if(bucket === 'Overdue') rMap[n].o++; }
       });
       const list = Object.values(rMap); list.forEach(r => r.complianceRate = r.t > 0 ? Math.round((r.s/r.t)*100) : 100);
       list.sort((a,b) => a.name.localeCompare(b.name));
