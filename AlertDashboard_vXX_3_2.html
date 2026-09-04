@@ -86,6 +86,9 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
     --warning:        #8a6216;
     --warning-bg:     #f8efdc;
     --warning-border: #e3d0a6;
+    --info:           #285e8a;
+    --info-bg:        #e6eef5;
+    --info-border:    #bdd1e3;
 
     /* Hairlines — documents use rules, not boxes */
     --rule:        #dcd9d2;
@@ -420,6 +423,7 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
   .pill.danger  { background: var(--danger-bg);  color: var(--danger);  border-color: var(--danger-border); }
   .pill.neutral { background: var(--paper-sunk); color: var(--ink-faint); border-color: var(--rule); }
   .pill.pending { background: var(--warning-bg); color: var(--warning); border-color: var(--warning-border); }
+  .pill.info { background: var(--info-bg); color: var(--info); border-color: var(--info-border); }
 
   /* ---------- Expand / collapse (Detailed Data Grid) ---------- */
   .caret-col { width: 2.2rem; }
@@ -608,7 +612,7 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
     #tab-sec-table th:nth-child(4), #tab-sec-table td:nth-child(4) { width: 20%; }
     #tab-sec-table th:nth-child(5), #tab-sec-table td:nth-child(5) { width: 20%; }
     #tab-sec-table th:nth-child(6), #tab-sec-table td:nth-child(6) { width: 25%; }
-    .detail-wrap { padding: 0.5rem 0.3rem 0.6rem 0.3rem !important; gap: 0.4rem !important; grid-template-columns: repeat(4, 1fr) !important; }
+    .detail-wrap { padding: 0.5rem 0.3rem 0.6rem 0.3rem !important; gap: 0.4rem !important; grid-template-columns: repeat(5, 1fr) !important; }
     .detail-label { font-size: 5.2pt !important; }
     tr.detail-row td { background: #fff !important; }
     tr.record-row.expanded td { background: #f2f2f2 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
@@ -856,6 +860,12 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
             <option value="all">All Statuses</option><option value="on-schedule">On-Schedule</option><option value="overdue">Overdue</option><option value="na">Not Applicable</option>
           </select>
         </div>
+        <div class="form-group">
+          <label>Extension Applied</label>
+          <select id="ext-filter" class="form-control">
+            <option value="all">All Statuses</option><option value="on-schedule">On-Schedule</option><option value="overdue">Overdue</option><option value="na">Not Applicable</option>
+          </select>
+        </div>
 
         <button id="btn-clear-filters" class="btn" style="width:100%; justify-content:center; margin-top:1.1rem;"><svg class="icon icon-sm"><use href="#icon-filter-x"></use></svg> Clear Filters</button>
       </div>
@@ -1093,7 +1103,7 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
     // --- Global Application State ---
     const state = {
       rawData: [], data: [],
-      filters: { search: '', ws: '', ap: 'all', three: 'all', six: 'all', corr: 'all' },
+      filters: { search: '', ws: '', ap: 'all', three: 'all', six: 'all', corr: 'all', ext: 'all' },
       sortKey: 'dateCreated', sortAsc: false,
       reviewerSortKey: 'name', reviewerSortAsc: true,
       page: 1, pageSize: 25, activeTab: 'overview',
@@ -1284,6 +1294,7 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
         { idx: 1, due: parseDate(item.threeDue), comp: parseDate(item.threeComp), status: item.threeStatus },
         { idx: 2, due: parseDate(item.sixDue),   comp: parseDate(item.sixComp),   status: item.sixStatus },
         { idx: 3, due: parseDate(item.corrDue),  comp: parseDate(item.corrComp),  status: item.corrStatus },
+        { idx: 4, due: parseDate(item.extDue),   comp: parseDate(item.extComp),   status: item.extStatus },
       ].filter(m => m.status && m.status !== 'N/A');
 
       if (milestones.length === 0) return 'N/A';
@@ -1303,14 +1314,23 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
 
       // Earliest incomplete milestone drives the status; otherwise the last completed one.
       const active = milestones.find(m => !m.comp);
-      return active ? active.status : milestones[milestones.length - 1].status;
+      if (!active) return milestones[milestones.length - 1].status;
+
+      // Extension Applied participates in the normal earliest-incomplete sequencing (unlike
+      // Corrections Required, it doesn't block or override anything) -- it just carries its
+      // own distinct label and color when it happens to be the milestone currently driving
+      // the record. Still counts toward compliance by its own due date (getComplianceBucket).
+      if (active.idx === 4) return 'Extension Applied';
+      return active.status;
     }
 
     // The On-Schedule/Overdue bucket used for counting, charting, and coloring --
-    // distinct from the "Corrections Pending" label shown on the pill and in exports.
-    // A pending correction still counts by its own due date; only the wording is neutral.
+    // distinct from the "Corrections Pending"/"Extension Applied" labels shown on the pill
+    // and in exports. Both still count by their own due date; only the wording is neutral.
     function getComplianceBucket(item) {
-      return item.overallStatus === 'Corrections Pending' ? item.corrStatus : item.overallStatus;
+      if (item.overallStatus === 'Corrections Pending') return item.corrStatus;
+      if (item.overallStatus === 'Extension Applied') return item.extStatus;
+      return item.overallStatus;
     }
 
     // --- File Parser Engine ---
@@ -1434,7 +1454,7 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
             }
           }
 
-          let apDue = '', apComp = '', apCompVal = '', threeDue = '', threeComp = '', threeCompVal = '', sixDue = '', sixComp = '', sixCompVal = '', corrDue = '', corrComp = '', corrCompVal = '';
+          let apDue = '', apComp = '', apCompVal = '', threeDue = '', threeComp = '', threeCompVal = '', sixDue = '', sixComp = '', sixCompVal = '', corrDue = '', corrComp = '', corrCompVal = '', extDue = '', extComp = '', extCompVal = '';
           // "Extended 3-Month Assessment" / "Extended 6-Month Assessment" supersede their plain
           // counterparts. They are collected separately rather than assigned in place: an extended
           // task type still matches the plain substring test ('extended 3-month' contains '3-month'),
@@ -1457,6 +1477,10 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
             // "Correction(s) Required" -- a reviewer kicking a submission back for rework.
             // No Extended variant exists for this task type in the source data.
             else if (type.includes('correction')) { corrDue=due; corrComp=comp; corrCompVal=compVal; }
+            // "Extension Applied" -- its own tracked milestone, distinct from the
+            // "Extended 3-Month/6-Month Assessment" task types handled above (which
+            // supersede the plain assessment rather than standing on their own).
+            else if (type.includes('extension')) { extDue=due; extComp=comp; extCompVal=compVal; }
           });
 
           // Promote the extension over the original, keeping the superseded dates for the tooltip.
@@ -1470,7 +1494,7 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
             sixDue = sixExtDue; sixComp = sixExtComp; sixCompVal = sixExtCompVal;
           }
 
-          records.push({ isb: isbNum, workstation: workstation || 'Unknown Unit', reviewer: reviewer || 'Unassigned', dateCreated, dateSent, apDue, apComp, apCompVal, threeDue, threeComp, threeCompVal, sixDue, sixComp, sixCompVal, corrDue, corrComp, corrCompVal, threeExt, threeOrigDue, threeOrigComp, sixExt, sixOrigDue, sixOrigComp });
+          records.push({ isb: isbNum, workstation: workstation || 'Unknown Unit', reviewer: reviewer || 'Unassigned', dateCreated, dateSent, apDue, apComp, apCompVal, threeDue, threeComp, threeCompVal, sixDue, sixComp, sixCompVal, corrDue, corrComp, corrCompVal, extDue, extComp, extCompVal, threeExt, threeOrigDue, threeOrigComp, sixExt, sixOrigDue, sixOrigComp });
         }
       } else {
         const keysISB = ['isb #', 'isb number', 'isb', 'incident isb', 'incident isb #'];
@@ -1486,6 +1510,8 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
         const keys6MComp = ['6-month assessment completed', '6-month completed', '6month completed', '6 month completed', 'task: completed date (6-month assessment)'];
         const keysCorrDue = ['corrections required due', 'correction(s) required due', 'correction due', 'task: due date (correction(s) required)'];
         const keysCorrComp = ['corrections required completed', 'correction(s) required completed', 'correction completed', 'task: completed date (correction(s) required)'];
+        const keysExtDue = ['extension applied due', 'extension due', 'task: due date (extension applied)'];
+        const keysExtComp = ['extension applied completed', 'extension completed', 'task: completed date (extension applied)'];
 
         const extract = (row, matchers) => { for(let m of matchers) if(row[m] !== undefined) return row[m]; return ''; };
 
@@ -1499,6 +1525,7 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
             threeDue: (extract(row, keys3MDue) || '').toString().trim(), threeComp: (extract(row, keys3MComp) || '').toString().trim(),
             sixDue: (extract(row, keys6MDue) || '').toString().trim(), sixComp: (extract(row, keys6MComp) || '').toString().trim(),
             corrDue: (extract(row, keysCorrDue) || '').toString().trim(), corrComp: (extract(row, keysCorrComp) || '').toString().trim(),
+            extDue: (extract(row, keysExtDue) || '').toString().trim(), extComp: (extract(row, keysExtComp) || '').toString().trim(),
             // The wide layout has no extended columns, but the record shape must stay uniform.
             threeExt: false, threeOrigDue: '', threeOrigComp: '', sixExt: false, sixOrigDue: '', sixOrigComp: ''
           });
@@ -1510,10 +1537,12 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
         item.threeStatus = getTaskStatus(item.threeDue, item.threeComp, item.threeCompVal);
         item.sixStatus = getTaskStatus(item.sixDue, item.sixComp, item.sixCompVal);
         item.corrStatus = getTaskStatus(item.corrDue, item.corrComp, item.corrCompVal);
+        item.extStatus = getTaskStatus(item.extDue, item.extComp, item.extCompVal);
         item.apDays = calculateDaysRemaining(item.apDue, item.apComp);
         item.threeDays = calculateDaysRemaining(item.threeDue, item.threeComp);
         item.sixDays = calculateDaysRemaining(item.sixDue, item.sixComp);
         item.corrDays = calculateDaysRemaining(item.corrDue, item.corrComp);
+        item.extDays = calculateDaysRemaining(item.extDue, item.extComp);
         item.overallStatus = getOverallStatus(item);
         return item;
       });
@@ -1565,7 +1594,7 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
     }
 
     function applyFilters() {
-      const q = state.filters.search.toLowerCase(), ws = state.filters.ws, ap = state.filters.ap, three = state.filters.three, six = state.filters.six, corr = state.filters.corr;
+      const q = state.filters.search.toLowerCase(), ws = state.filters.ws, ap = state.filters.ap, three = state.filters.three, six = state.filters.six, corr = state.filters.corr, ext = state.filters.ext;
       state.data = state.rawData.filter(item => {
         // Searching "ext" (or any longer prefix of "extended") surfaces records carrying an
         // extension. The 3-char floor keeps short queries like "e" from matching every one of them.
@@ -1577,6 +1606,7 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
         if (three !== 'all' && gk(item.threeStatus) !== three) return false;
         if (six !== 'all' && gk(item.sixStatus) !== six) return false;
         if (corr !== 'all' && gk(item.corrStatus) !== corr) return false;
+        if (ext !== 'all' && gk(item.extStatus) !== ext) return false;
         return true;
       });
       sortData(); updateMetrics(); updateCharts(); renderTable(); renderReviewersTab();
@@ -1585,8 +1615,8 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
     function clearFilters() {
       document.getElementById('search-input').value = '';
       document.getElementById('ws-filter').value = '';
-      ['ap-filter', 'three-filter', 'six-filter', 'corr-filter'].forEach(id => document.getElementById(id).value = 'all');
-      state.filters = { search: '', ws: '', ap: 'all', three: 'all', six: 'all', corr: 'all' };
+      ['ap-filter', 'three-filter', 'six-filter', 'corr-filter', 'ext-filter'].forEach(id => document.getElementById(id).value = 'all');
+      state.filters = { search: '', ws: '', ap: 'all', three: 'all', six: 'all', corr: 'all', ext: 'all' };
       applyFilters();
     }
 
@@ -1678,6 +1708,7 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
         { idx: 1, label: '3-Month Assessment',   due: parseDate(item.threeDue), comp: parseDate(item.threeComp), status: item.threeStatus },
         { idx: 2, label: '6-Month Assessment',   due: parseDate(item.sixDue),   comp: parseDate(item.sixComp),   status: item.sixStatus },
         { idx: 3, label: 'Corrections Required', due: parseDate(item.corrDue),  comp: parseDate(item.corrComp),  status: item.corrStatus },
+        { idx: 4, label: 'Extension Applied',    due: parseDate(item.extDue),   comp: parseDate(item.extComp),   status: item.extStatus },
       ].filter(m => m.status && m.status !== 'N/A');
 
       if (milestones.length === 0) return null;
@@ -1725,6 +1756,7 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
       if (state.filters.three !== 'all') bits.push(`3-month ${label[state.filters.three]}`);
       if (state.filters.six !== 'all') bits.push(`6-month ${label[state.filters.six]}`);
       if (state.filters.corr !== 'all') bits.push(`corrections required ${label[state.filters.corr]}`);
+      if (state.filters.ext !== 'all') bits.push(`extension applied ${label[state.filters.ext]}`);
       scopeEl.textContent = 'Scope: ' + (bits.length ? bits.join(' · ') : 'all units, all statuses');
     }
 
@@ -1874,10 +1906,11 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
       host.innerHTML = '';
 
       const stages = [
-        { name: 'Action Plan',         key: 'apStatus',    on: 0, over: 0 },
-        { name: '3-Month Assessment',  key: 'threeStatus', on: 0, over: 0 },
-        { name: '6-Month Assessment',  key: 'sixStatus',   on: 0, over: 0 },
-        { name: 'Corrections Required', key: 'corrStatus', on: 0, over: 0 },
+        { name: 'Action Plan',          key: 'apStatus',    on: 0, over: 0 },
+        { name: '3-Month Assessment',   key: 'threeStatus', on: 0, over: 0 },
+        { name: '6-Month Assessment',   key: 'sixStatus',   on: 0, over: 0 },
+        { name: 'Corrections Required', key: 'corrStatus',  on: 0, over: 0 },
+        { name: 'Extension Applied',    key: 'extStatus',   on: 0, over: 0 },
       ];
 
       state.data.forEach(item => {
@@ -2014,6 +2047,7 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
         const overPill = item.overallStatus === 'On-Schedule' ? 'success'
           : item.overallStatus === 'Overdue' ? 'danger'
           : item.overallStatus === 'Corrections Pending' ? 'pending'
+          : item.overallStatus === 'Extension Applied' ? 'info'
           : 'neutral';
 
         const mkTd = (html, style) => { const td = document.createElement('td'); if (style) td.setAttribute('style', style); td.innerHTML = html; return td; };
@@ -2057,6 +2091,10 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
           <div class="detail-col">
             <div class="detail-label">Corrections Required</div>
             ${renderSubBadge(item.corrDue, item.corrComp, item.corrStatus)}
+          </div>
+          <div class="detail-col">
+            <div class="detail-label">Extension Applied</div>
+            ${renderSubBadge(item.extDue, item.extComp, item.extStatus)}
           </div>
         </div>
       `;
@@ -2217,6 +2255,9 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
       if (state.filters.corr !== 'all') {
         parts.push(`corr_${state.filters.corr}`);
       }
+      if (state.filters.ext !== 'all') {
+        parts.push(`ext_${state.filters.ext}`);
+      }
       if (parts.length === 1) {
         parts.push('all');
       }
@@ -2241,6 +2282,7 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
         [`  3-Month Assessment Milestone Filter:`, state.filters.three === 'all' ? 'All Statuses' : state.filters.three],
         [`  6-Month Assessment Milestone Filter:`, state.filters.six === 'all' ? 'All Statuses' : state.filters.six],
         [`  Corrections Required Milestone Filter:`, state.filters.corr === 'all' ? 'All Statuses' : state.filters.corr],
+        [`  Extension Applied Milestone Filter:`, state.filters.ext === 'all' ? 'All Statuses' : state.filters.ext],
         [`  Milestone Detail:`, 'Included only for records expanded in the Detailed Data Grid at export time'],
         [], // spacing gap row
       ];
@@ -2251,6 +2293,7 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
         '3-Month Assessment Due', '3-Month Assessment Completed', '3-Month Assessment Status', '3-Month Assessment Extended',
         '6-Month Assessment Due', '6-Month Assessment Completed', '6-Month Assessment Status', '6-Month Assessment Extended',
         'Corrections Required Due', 'Corrections Required Completed', 'Corrections Required Status',
+        'Extension Applied Due', 'Extension Applied Completed', 'Extension Applied Status',
         'Overall Status'
       ];
 
@@ -2258,14 +2301,16 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
       // milestone columns blank; only a record the user expanded carries the detail.
       // Where an assessment was extended, the Due/Completed columns already carry the
       // extended dates -- the suffix and the Extended column are what tell the reader
-      // that happened. Corrections Required has no Extended variant in the source data.
+      // that happened. Corrections Required and Extension Applied have no Extended
+      // variant of their own in the source data.
       const rows = state.data.map(i => {
         const milestones = state.expandedRows.has(i.isb) ? [
           formatDate(i.apDue), formatDate(i.apComp), i.apStatus,
           formatDate(i.threeDue), formatDate(i.threeComp), i.threeStatus + (i.threeExt ? ' (EXT)' : ''), i.threeExt ? 'Yes' : '',
           formatDate(i.sixDue), formatDate(i.sixComp), i.sixStatus + (i.sixExt ? ' (EXT)' : ''), i.sixExt ? 'Yes' : '',
-          formatDate(i.corrDue), formatDate(i.corrComp), i.corrStatus
-        ] : Array(14).fill('');
+          formatDate(i.corrDue), formatDate(i.corrComp), i.corrStatus,
+          formatDate(i.extDue), formatDate(i.extComp), i.extStatus
+        ] : Array(17).fill('');
         return [i.isb, i.workstation, i.reviewer, formatDate(i.dateCreated), formatDate(i.dateSent), ...milestones, i.overallStatus];
       });
 
@@ -2418,7 +2463,7 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
 
       // Input bindings
       document.getElementById('search-input').oninput = (e) => { state.filters.search = e.target.value; state.page = 1; applyFilters(); };
-      ['ws', 'ap', 'three', 'six', 'corr'].forEach(id => {
+      ['ws', 'ap', 'three', 'six', 'corr', 'ext'].forEach(id => {
         document.getElementById(`${id}-filter`).onchange = (e) => { state.filters[id] = e.target.value; state.page = 1; applyFilters(); };
       });
       document.getElementById('btn-clear-filters').onclick = clearFilters;
