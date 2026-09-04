@@ -2304,13 +2304,12 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
       ];
 
       const headers = [
-        'ISB Number', 'Workstation', 'Last Routing', 'Date Created', 'Date Sent To Field',
+        'ISB Number', 'Workstation', 'Last Routing', 'Overall Status', 'Date Created', 'Date Sent To Field',
         'Action Plan Due', 'Action Plan Completed', 'Action Plan Status',
         '3-Month Assessment Due', '3-Month Assessment Completed', '3-Month Assessment Status', '3-Month Assessment Extended',
         '6-Month Assessment Due', '6-Month Assessment Completed', '6-Month Assessment Status', '6-Month Assessment Extended',
         'Corrections Required Due', 'Corrections Required Completed', 'Corrections Required Status',
-        'Extension Applied Due', 'Extension Applied Completed', 'Extension Applied Status',
-        'Overall Status'
+        'Extension Applied Due', 'Extension Applied Completed', 'Extension Applied Status'
       ];
 
       // Mirrors what's on screen: a record collapsed in the grid exports with its
@@ -2327,7 +2326,7 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
           formatDate(i.corrDue), formatDate(i.corrComp), i.corrStatus,
           formatDate(i.extDue), formatDate(i.extComp), i.extStatus
         ] : Array(17).fill('');
-        return [i.isb, i.workstation, i.reviewer, formatDate(i.dateCreated), formatDate(i.dateSent), ...milestones, i.overallStatus];
+        return [i.isb, i.workstation, i.reviewer, i.overallStatus, formatDate(i.dateCreated), formatDate(i.dateSent), ...milestones];
       });
 
       const dataOut = [...metadata, headers, ...rows];
