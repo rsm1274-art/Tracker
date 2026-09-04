@@ -1297,7 +1297,14 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
         { idx: 4, due: parseDate(item.extDue),   comp: parseDate(item.extComp),   status: item.extStatus },
       ].filter(m => m.status && m.status !== 'N/A');
 
-      if (milestones.length === 0) return 'N/A';
+      if (milestones.length === 0) {
+        // No dated/valued milestone was tracked at all -- ordinarily "N/A". But an
+        // Extension Applied task recorded with no due date of its own (extStatus reads
+        // N/A and gets filtered out above, same as everything else here) still means
+        // something concrete happened on this record, so it overrides the bare N/A.
+        if (item.extFound && !item.extComp) return 'Extension Applied';
+        return 'N/A';
+      }
 
       // An open Corrections Required task means a submission was already reviewed and sent
       // back for rework -- that outranks every other milestone's own due-date urgency,
@@ -1454,7 +1461,7 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
             }
           }
 
-          let apDue = '', apComp = '', apCompVal = '', threeDue = '', threeComp = '', threeCompVal = '', sixDue = '', sixComp = '', sixCompVal = '', corrDue = '', corrComp = '', corrCompVal = '', extDue = '', extComp = '', extCompVal = '';
+          let apDue = '', apComp = '', apCompVal = '', threeDue = '', threeComp = '', threeCompVal = '', sixDue = '', sixComp = '', sixCompVal = '', corrDue = '', corrComp = '', corrCompVal = '', extDue = '', extComp = '', extCompVal = '', extFound = false;
           // "Extended 3-Month Assessment" / "Extended 6-Month Assessment" supersede their plain
           // counterparts. They are collected separately rather than assigned in place: an extended
           // task type still matches the plain substring test ('extended 3-month' contains '3-month'),
@@ -1479,8 +1486,11 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
             else if (type.includes('correction')) { corrDue=due; corrComp=comp; corrCompVal=compVal; }
             // "Extension Applied" -- its own tracked milestone, distinct from the
             // "Extended 3-Month/6-Month Assessment" task types handled above (which
-            // supersede the plain assessment rather than standing on their own).
-            else if (type.includes('extension')) { extDue=due; extComp=comp; extCompVal=compVal; }
+            // supersede the plain assessment rather than standing on their own). Recorded
+            // even when the row carries no due date -- extFound is what lets
+            // getOverallStatus() know an extension exists at all, independent of extStatus
+            // (which would otherwise read N/A and be filtered out silently).
+            else if (type.includes('extension')) { extDue=due; extComp=comp; extCompVal=compVal; extFound=true; }
           });
 
           // Promote the extension over the original, keeping the superseded dates for the tooltip.
@@ -1494,7 +1504,7 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
             sixDue = sixExtDue; sixComp = sixExtComp; sixCompVal = sixExtCompVal;
           }
 
-          records.push({ isb: isbNum, workstation: workstation || 'Unknown Unit', reviewer: reviewer || 'Unassigned', dateCreated, dateSent, apDue, apComp, apCompVal, threeDue, threeComp, threeCompVal, sixDue, sixComp, sixCompVal, corrDue, corrComp, corrCompVal, extDue, extComp, extCompVal, threeExt, threeOrigDue, threeOrigComp, sixExt, sixOrigDue, sixOrigComp });
+          records.push({ isb: isbNum, workstation: workstation || 'Unknown Unit', reviewer: reviewer || 'Unassigned', dateCreated, dateSent, apDue, apComp, apCompVal, threeDue, threeComp, threeCompVal, sixDue, sixComp, sixCompVal, corrDue, corrComp, corrCompVal, extDue, extComp, extCompVal, extFound, threeExt, threeOrigDue, threeOrigComp, sixExt, sixOrigDue, sixOrigComp });
         }
       } else {
         const keysISB = ['isb #', 'isb number', 'isb', 'incident isb', 'incident isb #'];
@@ -1518,6 +1528,8 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
         normalizedRows.forEach(row => {
           const isb = (extract(row, keysISB) || '').toString().trim();
           if (!isb) return;
+          const extDue = (extract(row, keysExtDue) || '').toString().trim();
+          const extComp = (extract(row, keysExtComp) || '').toString().trim();
           records.push({
             isb, workstation: (extract(row, keysWS) || 'Unknown Unit').toString().trim(), reviewer: (extract(row, keysReviewer) || 'Unassigned').toString().trim(),
             dateCreated: (extract(row, keysCreated) || '').toString().trim(), dateSent: (extract(row, keysSent) || '').toString().trim(),
@@ -1525,7 +1537,11 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
             threeDue: (extract(row, keys3MDue) || '').toString().trim(), threeComp: (extract(row, keys3MComp) || '').toString().trim(),
             sixDue: (extract(row, keys6MDue) || '').toString().trim(), sixComp: (extract(row, keys6MComp) || '').toString().trim(),
             corrDue: (extract(row, keysCorrDue) || '').toString().trim(), corrComp: (extract(row, keysCorrComp) || '').toString().trim(),
-            extDue: (extract(row, keysExtDue) || '').toString().trim(), extComp: (extract(row, keysExtComp) || '').toString().trim(),
+            extDue, extComp,
+            // The wide layout has one row per ISB rather than a task-type row per milestone,
+            // so presence can only be inferred from a filled-in date -- unlike the long
+            // format, there's no way to see "extension applied, no due date yet" here.
+            extFound: !!(extDue || extComp),
             // The wide layout has no extended columns, but the record shape must stay uniform.
             threeExt: false, threeOrigDue: '', threeOrigComp: '', sixExt: false, sixOrigDue: '', sixOrigComp: ''
           });
