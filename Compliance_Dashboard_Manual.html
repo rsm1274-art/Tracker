@@ -1,0 +1,604 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Compliance Dashboard Manual</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&family=Public+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+  :root {
+    --paper:        #f6f5f2;
+    --paper-raised: #fffffe;
+    --paper-sunk:   #efeee9;
+    --ink:          #14181d;
+    --ink-soft:     #4a5360;
+    --ink-faint:    #7d8794;
+    --ink-ghost:    #a8b0ba;
+
+    --mpd-blue:      #102a43;
+    --navy-deep:     #071a2c;
+    --navy-mid:      #1b3f5f;
+    --navy-tint:     #e8edf3;
+    --mpd-gold:      #9c7c3c;
+    --brass-bright:  #c9a860;
+    --brass-tint:    #f4eddd;
+
+    --success:        #1c6b4b;
+    --success-bg:     #e7f1ec;
+    --success-border: #bcd8ca;
+    --danger:         #982c20;
+    --danger-bg:      #f8e9e7;
+    --danger-border:  #e6c3bd;
+    --warning:        #8a6216;
+    --warning-bg:     #f8efdc;
+    --warning-border: #e3d0a6;
+    --info:           #285e8a;
+    --info-bg:        #e6eef5;
+    --info-border:    #bdd1e3;
+    --neutral:        #4a5360;
+    --neutral-bg:     #eceae4;
+    --neutral-border: #d4d0c6;
+
+    --rule:        #dcd9d2;
+    --rule-strong: #c3bfb6;
+
+    --shadow-sm: 0 1px 2px rgba(16,42,67,0.06);
+    --shadow-md: 0 10px 28px -14px rgba(7,26,44,0.28);
+
+    --sans:  'Public Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+    --serif: 'Source Serif 4', Georgia, 'Times New Roman', serif;
+    --mono:  'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper:        #0e1520;
+      --paper-raised: #141d2b;
+      --paper-sunk:   #0a1119;
+      --ink:          #eceef1;
+      --ink-soft:     #b6bfcb;
+      --ink-faint:    #8493a4;
+      --ink-ghost:    #566173;
+
+      --mpd-blue:      #9fc1e8;
+      --navy-deep:     #0a1a2c;
+      --navy-mid:      #1e3f5e;
+      --navy-tint:     #16283b;
+      --mpd-gold:      #d9b96a;
+      --brass-bright:  #e2c583;
+      --brass-tint:    #241f14;
+
+      --success:        #6fbf9a;
+      --success-bg:     #12251c;
+      --success-border: #274a38;
+      --danger:         #e4897a;
+      --danger-bg:      #2a1512;
+      --danger-border:  #4d2721;
+      --warning:        #e0b96a;
+      --warning-bg:     #291f0f;
+      --warning-border: #4a3a1c;
+      --info:           #8ab4dc;
+      --info-bg:        #101e2c;
+      --info-border:    #23394f;
+      --neutral:        #b6bfcb;
+      --neutral-bg:     #1b2330;
+      --neutral-border: #2c3646;
+
+      --rule:        #263140;
+      --rule-strong: #37455a;
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper:        #0e1520;
+    --paper-raised: #141d2b;
+    --paper-sunk:   #0a1119;
+    --ink:          #eceef1;
+    --ink-soft:     #b6bfcb;
+    --ink-faint:    #8493a4;
+    --ink-ghost:    #566173;
+
+    --mpd-blue:      #9fc1e8;
+    --navy-deep:     #0a1a2c;
+    --navy-mid:      #1e3f5e;
+    --navy-tint:     #16283b;
+    --mpd-gold:      #d9b96a;
+    --brass-bright:  #e2c583;
+    --brass-tint:    #241f14;
+
+    --success:        #6fbf9a;
+    --success-bg:     #12251c;
+    --success-border: #274a38;
+    --danger:         #e4897a;
+    --danger-bg:      #2a1512;
+    --danger-border:  #4d2721;
+    --warning:        #e0b96a;
+    --warning-bg:     #291f0f;
+    --warning-border: #4a3a1c;
+    --info:           #8ab4dc;
+    --info-bg:        #101e2c;
+    --info-border:    #23394f;
+    --neutral:        #b6bfcb;
+    --neutral-bg:     #1b2330;
+    --neutral-border: #2c3646;
+
+    --rule:        #263140;
+    --rule-strong: #37455a;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--paper); color: var(--ink);
+    font-family: var(--sans); font-size: 15px; line-height: 1.6;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ---------- Masthead ---------- */
+  .masthead {
+    background: var(--navy-deep);
+    background-image: linear-gradient(155deg, var(--navy-deep), var(--mpd-blue) 120%);
+    color: #eef2f6;
+    padding: 2.6rem 1.5rem 2.2rem;
+    display: flex; flex-direction: column; align-items: center; text-align: center;
+    gap: 0.6rem;
+    border-bottom: 3px solid var(--brass-bright);
+  }
+  .masthead .seal { width: 40px; height: 40px; color: var(--brass-bright); margin-bottom: 0.3rem; }
+  .masthead .eyebrow {
+    font-size: 0.72rem; letter-spacing: 0.14em; text-transform: uppercase;
+    color: var(--brass-bright); font-weight: 600;
+  }
+  .masthead h1 {
+    font-family: var(--serif); font-weight: 600; font-size: clamp(1.7rem, 4vw, 2.5rem);
+    margin: 0.1rem 0; text-wrap: balance; letter-spacing: -0.01em;
+  }
+  .masthead p.sub { color: #c3d1e0; font-size: 0.92rem; max-width: 46rem; margin: 0; }
+  .masthead .version-tag {
+    margin-top: 0.5rem; font-family: var(--mono); font-size: 0.72rem;
+    color: var(--navy-deep); background: var(--brass-bright);
+    padding: 0.22rem 0.65rem; border-radius: 99px; font-weight: 600; letter-spacing: 0.02em;
+  }
+
+  /* ---------- Page shell ---------- */
+  .shell {
+    max-width: 1180px; margin: 0 auto; padding: 0 1.5rem;
+    display: grid; grid-template-columns: 220px minmax(0,1fr); gap: 2.6rem;
+    align-items: start;
+  }
+
+  /* ---------- Side wayfinding ---------- */
+  .toc {
+    position: sticky; top: 1.5rem;
+    padding: 1.4rem 0 2rem;
+    display: flex; flex-direction: column; gap: 0.15rem;
+  }
+  .toc-label {
+    font-size: 0.66rem; letter-spacing: 0.12em; text-transform: uppercase;
+    color: var(--ink-ghost); font-weight: 700; margin-bottom: 0.5rem;
+  }
+  .toc a {
+    color: var(--ink-soft); text-decoration: none; font-size: 0.83rem;
+    padding: 0.34rem 0.6rem; border-radius: 4px; border-left: 2px solid transparent;
+    transition: background 0.15s, color 0.15s, border-color 0.15s;
+  }
+  .toc a:hover { background: var(--paper-sunk); color: var(--ink); }
+  .toc a:focus-visible { outline: 2px solid var(--mpd-gold); outline-offset: 1px; }
+  .toc a.num { color: var(--ink-ghost); font-family: var(--mono); font-size: 0.72rem; margin-right: 0.4rem; }
+
+  /* ---------- Main column ---------- */
+  main { padding: 2rem 0 5rem; min-width: 0; }
+
+  section.entry { margin-bottom: 3.2rem; scroll-margin-top: 1.5rem; }
+  .entry-head {
+    display: flex; align-items: baseline; gap: 0.7rem;
+    border-bottom: 2px solid var(--mpd-blue); padding-bottom: 0.6rem; margin-bottom: 1.1rem;
+  }
+  .entry-num {
+    font-family: var(--mono); font-size: 0.85rem; color: var(--brass-bright);
+    background: var(--navy-deep); border-radius: 3px; padding: 0.15rem 0.5rem; font-weight: 600;
+  }
+  .entry-head h2 {
+    font-family: var(--serif); font-size: 1.5rem; font-weight: 600; margin: 0;
+    color: var(--mpd-blue); text-wrap: balance;
+  }
+  .entry > p.lede { color: var(--ink-soft); max-width: 62ch; margin: 0 0 1.2rem; }
+
+  h3.sub-head {
+    font-family: var(--serif); font-size: 1.06rem; font-weight: 600; margin: 1.6rem 0 0.7rem;
+    color: var(--ink);
+  }
+  p { max-width: 68ch; }
+  p.note { max-width: 68ch; color: var(--ink-faint); font-size: 0.85rem; }
+
+  code, .kw {
+    font-family: var(--mono); font-size: 0.83em; background: var(--paper-sunk);
+    border: 1px solid var(--rule); border-radius: 3px; padding: 0.06em 0.4em; color: var(--navy-mid);
+  }
+  :root[data-theme="dark"] code, :root[data-theme="dark"] .kw { color: var(--mpd-blue); }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) code, :root:not([data-theme="light"]) .kw { color: var(--mpd-blue); } }
+
+  /* ---------- Panels / cards ---------- */
+  .panel {
+    background: var(--paper-raised); border: 1px solid var(--rule); border-radius: 6px;
+    box-shadow: var(--shadow-sm); padding: 1.2rem 1.35rem; margin: 1rem 0;
+  }
+  .panel h4 {
+    font-size: 0.7rem; letter-spacing: 0.09em; text-transform: uppercase;
+    color: var(--mpd-gold); font-weight: 700; margin: 0 0 0.8rem;
+  }
+
+  /* ---------- Status pills (mirrors the live dashboard) ---------- */
+  .pill {
+    display: inline-flex; align-items: center; gap: 0.35rem;
+    font-size: 0.72rem; font-weight: 700; letter-spacing: 0.02em; text-transform: uppercase;
+    padding: 0.28rem 0.65rem; border-radius: 99px; border: 1px solid transparent; white-space: nowrap;
+  }
+  .pill.success { background: var(--success-bg); color: var(--success); border-color: var(--success-border); }
+  .pill.danger  { background: var(--danger-bg);  color: var(--danger);  border-color: var(--danger-border); }
+  .pill.pending { background: var(--warning-bg); color: var(--warning); border-color: var(--warning-border); }
+  .pill.info    { background: var(--info-bg);    color: var(--info);    border-color: var(--info-border); }
+  .pill.neutral { background: var(--neutral-bg); color: var(--neutral); border-color: var(--neutral-border); }
+
+  /* ---------- Precedence ladder ---------- */
+  .ladder { display: flex; flex-direction: column; gap: 0; margin: 1.1rem 0; }
+  .rung {
+    display: grid; grid-template-columns: 2rem 1fr auto; align-items: center; gap: 0.9rem;
+    padding: 0.75rem 0.9rem; border: 1px solid var(--rule); background: var(--paper-raised);
+  }
+  .rung:first-child { border-radius: 6px 6px 0 0; }
+  .rung:last-child { border-radius: 0 0 6px 6px; }
+  .rung + .rung { border-top: none; }
+  .rung .step {
+    font-family: var(--serif); font-weight: 700; font-size: 1.1rem; color: var(--brass-bright);
+    background: var(--navy-deep); width: 2rem; height: 2rem; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .rung .rule-text { font-size: 0.87rem; }
+  .rung .rule-text strong { color: var(--ink); }
+  .rung.override { background: var(--brass-tint); border-color: var(--brass-bright); }
+
+  /* ---------- Data tables ---------- */
+  .tbl-wrap { overflow-x: auto; margin: 1rem 0; border: 1px solid var(--rule); border-radius: 6px; }
+  table.ref { width: 100%; border-collapse: collapse; font-size: 0.83rem; background: var(--paper-raised); }
+  table.ref th {
+    text-align: left; background: var(--navy-deep); color: #dde6ef;
+    font-size: 0.68rem; letter-spacing: 0.07em; text-transform: uppercase;
+    padding: 0.6rem 0.85rem; font-weight: 600; white-space: nowrap;
+  }
+  table.ref td { padding: 0.6rem 0.85rem; border-top: 1px solid var(--rule); vertical-align: top; }
+  table.ref tr:nth-child(even) td { background: var(--paper-sunk); }
+  table.ref td.mono { font-family: var(--mono); font-size: 0.78rem; color: var(--ink-soft); }
+
+  /* ---------- Key chip list (header-matching keys) ---------- */
+  .chips { display: flex; flex-wrap: wrap; gap: 0.4rem; margin: 0.5rem 0 0; }
+  .chips code { background: var(--navy-tint); border-color: var(--rule-strong); }
+
+  /* ---------- Two-up grid ---------- */
+  .grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1rem; margin: 1rem 0; }
+
+  /* ---------- Metric tile mock ---------- */
+  .tile-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 0.8rem; margin: 1rem 0; }
+  .tile { background: var(--paper-raised); border: 1px solid var(--rule); border-radius: 6px; padding: 0.9rem 1rem; box-shadow: var(--shadow-sm); }
+  .tile .t-label { font-size: 0.66rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-faint); margin-bottom: 0.3rem; }
+  .tile .t-val { font-family: var(--serif); font-size: 1.5rem; font-weight: 600; }
+  .tile .t-val.ok { color: var(--success); }
+  .tile .t-val.bad { color: var(--danger); }
+
+  /* ---------- Sub-badge mock (matches expanded row detail) ---------- */
+  .badge-row { display: flex; flex-wrap: wrap; gap: 0.7rem; margin: 1rem 0; }
+  .sub-badge-mock {
+    border: 1px solid var(--rule); border-radius: 5px; padding: 0.55rem 0.75rem;
+    background: var(--paper-raised); font-size: 0.72rem; min-width: 128px;
+  }
+  .sub-badge-mock .lbl { color: var(--ink-faint); font-size: 0.64rem; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.3rem; }
+  .sub-badge-mock .top { display: flex; align-items: center; gap: 0.35rem; font-weight: 700; margin-bottom: 0.2rem; }
+  .sub-badge-mock .dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; }
+  .sub-badge-mock .date-line { color: var(--ink-faint); font-size: 0.7rem; }
+
+  /* ---------- Bar mock (workstation chart) ---------- */
+  .bar-demo { display: flex; flex-direction: column; gap: 0.5rem; margin: 1rem 0; }
+  .bar-demo .row { display: grid; grid-template-columns: 92px 1fr 40px; align-items: center; gap: 0.6rem; font-size: 0.76rem; }
+  .bar-demo .lbl { text-align: right; font-weight: 600; color: var(--ink-soft); }
+  .bar-demo .track { height: 15px; border-radius: 3px; overflow: hidden; display: flex; background: var(--paper-sunk); }
+  .bar-demo .seg.ok { background: var(--success); }
+  .bar-demo .seg.bad { background: var(--danger); }
+  .bar-demo .rate { font-weight: 700; }
+
+  /* ---------- Callouts ---------- */
+  .callout {
+    border-left: 3px solid var(--brass-bright); background: var(--brass-tint);
+    padding: 0.85rem 1rem; border-radius: 0 5px 5px 0; margin: 1.1rem 0; font-size: 0.87rem;
+  }
+  .callout strong { color: var(--mpd-gold); }
+
+  /* ---------- Format toggle tabs (Long vs Wide) ---------- */
+  .fmt-tabs { display: flex; gap: 0.4rem; margin-bottom: 0.8rem; }
+  .fmt-tab {
+    font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;
+    padding: 0.35rem 0.8rem; border-radius: 99px; border: 1px solid var(--rule-strong);
+    color: var(--ink-soft); background: var(--paper-sunk);
+  }
+  .fmt-tab.active { background: var(--mpd-blue); color: #fff; border-color: var(--mpd-blue); }
+
+  footer.colophon {
+    max-width: 1180px; margin: 0 auto; padding: 1.6rem 1.5rem 3rem 240px;
+    color: var(--ink-ghost); font-size: 0.76rem; border-top: 1px solid var(--rule); margin-top: 1rem;
+  }
+
+  @media (max-width: 860px) {
+    .shell { grid-template-columns: 1fr; }
+    .toc { position: static; flex-direction: row; flex-wrap: wrap; padding: 1rem 0; }
+    .toc a { border-left: none; }
+    footer.colophon { padding-left: 1.5rem; }
+  }
+
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+</style>
+</head>
+<body>
+
+<div class="masthead">
+  <svg class="seal" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.15">
+    <path d="M12 1.9 L20.9 5.0 V11.6 C20.9 16.7 17.2 20.9 12 22.5 C6.8 20.9 3.1 16.7 3.1 11.6 V5.0 Z"/>
+    <path d="M12 7.0 L12.95 9.72 L15.83 9.79 L13.55 11.53 L14.37 14.29 L12 12.66 L9.63 14.29 L10.45 11.53 L8.17 9.79 L11.05 9.72 Z" fill="currentColor" stroke="none"/>
+  </svg>
+  <div class="eyebrow">Reference &amp; Operating Notes</div>
+  <h1>Alert &amp; PEP Compliance Dashboard</h1>
+  <p class="sub">A field manual for the offline, single-file HTML tracker — what it computes, where every number comes from, and how to read the badges without guessing.</p>
+  <div class="version-tag">AlertDashboard_vXX_3_3.html</div>
+</div>
+
+<div class="shell">
+  <nav class="toc" aria-label="Sections">
+    <div class="toc-label">Contents</div>
+    <a href="#overview"><span class="num">00</span>What This Is</a>
+    <a href="#import"><span class="num">01</span>Getting Data In</a>
+    <a href="#milestones"><span class="num">02</span>The Five Milestones</a>
+    <a href="#status"><span class="num">03</span>Status Values</a>
+    <a href="#precedence"><span class="num">04</span>Overall Status Logic</a>
+    <a href="#overview-tab"><span class="num">05</span>Dashboard Overview</a>
+    <a href="#grid"><span class="num">06</span>Detailed Data Grid</a>
+    <a href="#reviewers"><span class="num">07</span>Reviewer Performance</a>
+    <a href="#filters"><span class="num">08</span>Filters &amp; Search</a>
+    <a href="#export"><span class="num">09</span>Exporting &amp; Sharing</a>
+    <a href="#changelog"><span class="num">10</span>vXX_3_3 Changes</a>
+  </nav>
+
+  <main>
+
+    <section class="entry" id="overview">
+      <div class="entry-head"><span class="entry-num">00</span><h2>What This Is</h2></div>
+      <p class="lede">A single HTML file — no server, no install — that turns an Alert / PEP routing export into a compliance dashboard. Drop in a CSV or XLSX; it pivots the rows into one record per incident (ISB #), works out each incident's status, and gives you charts, a sortable grid, reviewer stats, and CSV/print exports.</p>
+      <div class="callout"><strong>Offline by design.</strong> Everything — parsing, date math, charting — runs in the browser with no network calls. The badge in the header reads <span class="kw">Native Offline Engine</span> for that reason.</div>
+    </section>
+
+    <section class="entry" id="import">
+      <div class="entry-head"><span class="entry-num">01</span><h2>Getting Data In</h2></div>
+      <p class="lede">Drop a <code>.csv</code> or <code>.xlsx</code> file on the importer (XLSX reads the first sheet only). The importer auto-detects which of two shapes your export uses by checking for a <code>Task Type</code> column.</p>
+
+      <div class="fmt-tabs">
+        <span class="fmt-tab active">Long Format</span>
+        <span class="fmt-tab">Wide Format</span>
+      </div>
+      <div class="panel">
+        <h4>Long Format — one row per task, grouped by ISB #</h4>
+        <p style="margin:0 0 0.6rem;">Detected when a header contains <code>task type</code>. All rows sharing an <code>ISB #</code> are grouped; each row's <code>Task Type</code> text is matched by substring (case-insensitive) to sort it into a milestone:</p>
+        <div class="tbl-wrap">
+          <table class="ref">
+            <thead><tr><th>Milestone</th><th>Matches Task Type containing…</th></tr></thead>
+            <tbody>
+              <tr><td>Action Plan</td><td class="mono">"action plan" / "actionplan"</td></tr>
+              <tr><td>3-Month Assessment</td><td class="mono">"3-month" / "3month" / "3 month"</td></tr>
+              <tr><td>6-Month Assessment</td><td class="mono">"6-month" / "6month" / "6 month"</td></tr>
+              <tr><td>Corrections Required</td><td class="mono">"correction"</td></tr>
+              <tr><td>Extension Applied</td><td class="mono">"extension"</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note">A Task Type containing <code>"extended"</code> (e.g. <em>Extended 3-Month Assessment</em>) is captured separately and then <strong>promoted over</strong> the plain 3-Month or 6-Month row — the assessment's Due/Completed dates become the extended ones, and the original dates are kept only for the <span class="kw">EXT</span> tag's tooltip. Corrections Required and Extension Applied have no Extended variant.</p>
+        <p class="note">The reviewer shown as <strong>Last Routing</strong> is whichever row has the latest <code>Route: Sent Date</code> + <code>Route: Sent Time</code> for that ISB — not simply the first or last row in the file.</p>
+      </div>
+
+      <div class="panel">
+        <h4>Wide Format — one row per ISB</h4>
+        <p style="margin:0;">Used when no Task Type column exists. Each milestone's Due/Completed date is read from its own pair of columns, matched against a list of header aliases, e.g. for Extension Applied: <span class="chips"><code>extension applied due</code> <code>extension due</code> <code>task: due date (extension applied)</code></span> and <span class="chips"><code>extension applied completed</code> <code>extension completed</code> <code>task: completed date (extension applied)</code></span>. This shape has no Extended-assessment columns, so 3-Month/6-Month extensions never appear here.</p>
+      </div>
+
+      <h3 class="sub-head">Header aliases the importer already knows</h3>
+      <div class="tbl-wrap">
+        <table class="ref">
+          <thead><tr><th>Field</th><th>Recognized headers (either format)</th></tr></thead>
+          <tbody>
+            <tr><td>ISB #</td><td class="mono">isb #, isb number, isb, incident isb, incident isb #</td></tr>
+            <tr><td>Workstation</td><td class="mono">workstation, unit, org: workstation, inc: org: workstation</td></tr>
+            <tr><td>Reviewer</td><td class="mono">reviewer, route: reviewer, current reviewer</td></tr>
+            <tr><td>Date Created</td><td class="mono">created date, date created, inc: created date</td></tr>
+            <tr><td>Date Sent to Field</td><td class="mono">date sent, date sent to field, inc: date sent to field</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="note">Matching is by substring, lower-cased, whitespace-collapsed — column order and extra columns never matter. Dates accept MM/DD/YYYY text, ISO strings, or raw Excel serial numbers.</p>
+    </section>
+
+    <section class="entry" id="milestones">
+      <div class="entry-head"><span class="entry-num">02</span><h2>The Five Milestones</h2></div>
+      <p class="lede">Every incident is tracked against up to five milestones, always in this order:</p>
+      <div class="ladder">
+        <div class="rung"><span class="step">1</span><span class="rule-text"><strong>Action Plan</strong> — the initial corrective plan.</span><span></span></div>
+        <div class="rung"><span class="step">2</span><span class="rule-text"><strong>3-Month Assessment</strong> — first follow-up review.</span><span></span></div>
+        <div class="rung"><span class="step">3</span><span class="rule-text"><strong>6-Month Assessment</strong> — second follow-up review.</span><span></span></div>
+        <div class="rung"><span class="step">4</span><span class="rule-text"><strong>Corrections Required</strong> — a reviewer sent a submission back for rework.</span><span></span></div>
+        <div class="rung"><span class="step">5</span><span class="rule-text"><strong>Extension Applied</strong> — a due date was formally extended.</span><span></span></div>
+      </div>
+      <p>Each expanded row in the Detailed Data Grid shows all five as small badges:</p>
+      <div class="badge-row">
+        <div class="sub-badge-mock"><div class="lbl">Action Plan</div><div class="top"><span class="dot" style="background:var(--success)"></span><span style="color:var(--success)">On-Schedule</span></div><div class="date-line">Due: 03/04/2024</div></div>
+        <div class="sub-badge-mock"><div class="lbl">3-Month Assessment</div><div class="top"><span class="dot" style="background:var(--success)"></span><span>Complete</span></div><div class="date-line">Due: 06/04/2024</div><div class="date-line">Comp: 05/28/2024</div></div>
+        <div class="sub-badge-mock"><div class="lbl">6-Month Assessment</div><div class="top"><span class="dot" style="background:var(--danger)"></span><span style="color:var(--danger)">Overdue</span></div><div class="date-line">Due: 09/02/2026</div></div>
+        <div class="sub-badge-mock"><div class="lbl">Corrections Required</div><div class="top"><span class="dot" style="background:var(--rule-strong)"></span><span style="color:var(--ink-ghost)">N/A</span></div></div>
+        <div class="sub-badge-mock"><div class="lbl">Extension Applied</div><div class="top"><span class="dot" style="background:var(--danger)"></span><span style="color:var(--danger)">Overdue</span></div><div class="date-line">Due: 12/12/2024</div></div>
+      </div>
+      <p class="note">A milestone with a completed date always reads <strong>Complete</strong> here (neutral wording), regardless of whether it landed on time — the colored dot still carries that on-time/late signal.</p>
+    </section>
+
+    <section class="entry" id="status">
+      <div class="entry-head"><span class="entry-num">03</span><h2>Status Values</h2></div>
+      <p class="lede">Per-milestone status comes from <code>getTaskStatus(due, completed)</code>:</p>
+      <div class="tbl-wrap">
+        <table class="ref">
+          <thead><tr><th>Condition</th><th>Result</th></tr></thead>
+          <tbody>
+            <tr><td>Due date exists, completed after due date</td><td><span class="pill danger">Overdue</span></td></tr>
+            <tr><td>Due date exists, completed on/before due date</td><td><span class="pill success">On-Schedule</span></td></tr>
+            <tr><td>Due date exists, not yet completed, today is past due</td><td><span class="pill danger">Overdue</span></td></tr>
+            <tr><td>Due date exists, not yet completed, today is before due</td><td><span class="pill success">On-Schedule</span></td></tr>
+            <tr><td>No due date at all</td><td><span class="pill neutral">N/A</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>The <strong>overall status</strong> shown on the collapsed record row is one of five labels:</p>
+      <div style="display:flex; flex-wrap:wrap; gap:0.5rem; margin:0.8rem 0;">
+        <span class="pill success">On-Schedule</span>
+        <span class="pill danger">Overdue</span>
+        <span class="pill pending">Corrections Pending</span>
+        <span class="pill info">Extension Applied</span>
+        <span class="pill neutral">N/A</span>
+      </div>
+      <p class="note">Note the wording split: milestone badges use <em>Complete</em> for a finished task, while the overall record status uses the plain On-Schedule/Overdue/Corrections Pending/Extension Applied vocabulary — they're read from different logic (see next section).</p>
+    </section>
+
+    <section class="entry" id="precedence">
+      <div class="entry-head"><span class="entry-num">04</span><h2>Overall Status Logic</h2></div>
+      <p class="lede">This is the part worth memorizing — it's the rule that decides which single badge represents an incident with five separate milestones, and it explains why an "Extension Applied" or "Corrections Pending" row sometimes doesn't show the label you expected.</p>
+      <div class="ladder">
+        <div class="rung override">
+          <span class="step">1</span>
+          <span class="rule-text">An <strong>open Corrections Required</strong> task (no completed date) always wins — regardless of any other milestone's due date. Shown as <span class="kw">Corrections Pending</span>.</span>
+          <span></span>
+        </div>
+        <div class="rung">
+          <span class="step">2</span>
+          <span class="rule-text">Otherwise, sort every tracked (non-N/A) milestone by <strong>due date, earliest first</strong> — ties break Action Plan → 3-Month → 6-Month → Corrections → Extension.</span>
+          <span></span>
+        </div>
+        <div class="rung">
+          <span class="step">3</span>
+          <span class="rule-text">The <strong>earliest incomplete</strong> milestone in that order drives the label. If it's Extension Applied, the record reads <span class="kw">Extension Applied</span>; otherwise it shows that milestone's own On-Schedule / Overdue status.</span>
+          <span></span>
+        </div>
+        <div class="rung">
+          <span class="step">4</span>
+          <span class="rule-text">If <strong>every</strong> tracked milestone is completed, the record shows the <strong>last</strong> (latest due date) one's own status — never the literal "Extension Applied" or "Corrections Pending" label, even if that milestone was the last one completed.</span>
+          <span></span>
+        </div>
+        <div class="rung">
+          <span class="step">5</span>
+          <span class="rule-text">If <strong>no</strong> milestone has a due date at all, the record reads <span class="kw">N/A</span> — unless an Extension Applied task was recorded with no due date and no completion, in which case it still reads <span class="kw">Extension Applied</span>.</span>
+          <span></span>
+        </div>
+      </div>
+      <div class="callout"><strong>Why a row doesn't show "Extension Applied" even though the source data has that task type:</strong> the extension task must be both incomplete and the earliest-due unfinished milestone. If the same incident has an open Corrections Required task, or an earlier-due incomplete Action Plan / 3-Month / 6-Month, that takes precedence. And a <em>completed</em> extension is skipped like any finished milestone — it only drives the label while still open.</div>
+      <p class="note">Charts and KPI tiles use a related but separate helper, <code>getComplianceBucket()</code> — it reduces "Corrections Pending" and "Extension Applied" back down to their own On-Schedule/Overdue value for counting, so those records still count toward compliance rates by their own due date even though the grid shows a neutral label.</p>
+    </section>
+
+    <section class="entry" id="overview-tab">
+      <div class="entry-head"><span class="entry-num">05</span><h2>Dashboard Overview</h2></div>
+      <p class="lede">The landing tab after import. Four KPI tiles at top, three analysis panels below.</p>
+
+      <h3 class="sub-head">KPI Tiles</h3>
+      <div class="tile-row">
+        <div class="tile"><div class="t-label">Total Active Records</div><div class="t-val">247</div></div>
+        <div class="tile"><div class="t-label">Overall Compliance</div><div class="t-val ok">82%</div></div>
+        <div class="tile"><div class="t-label">On-Schedule Entries</div><div class="t-val ok">198</div></div>
+        <div class="tile"><div class="t-label">Total Overdue</div><div class="t-val bad">44</div></div>
+      </div>
+      <p class="note">Compliance % = On-Schedule ÷ (On-Schedule + Overdue) among records that were actually evaluated — N/A records don't count either way. The tile's color band shifts at 90% (green), 75% (amber), below that (red).</p>
+
+      <h3 class="sub-head">Workstation Volume &amp; Status</h3>
+      <p style="margin:0 0 0.4rem;">One bar per workstation, longest bar = most volume, split into On-Schedule / Overdue segments, sorted by total volume descending.</p>
+      <div class="bar-demo">
+        <div class="row"><span class="lbl">WS-CY-5523</span><div class="track"><div class="seg ok" style="width:68%"></div><div class="seg bad" style="width:32%"></div></div><span class="rate" style="color:var(--warning)">68%</span></div>
+        <div class="row"><span class="lbl">WS-MM-9447</span><div class="track"><div class="seg ok" style="width:20%"></div><div class="seg bad" style="width:80%"></div></div><span class="rate" style="color:var(--danger)">20%</span></div>
+        <div class="row"><span class="lbl">WS-GP-5123</span><div class="track"><div class="seg ok" style="width:100%"></div></div><span class="rate" style="color:var(--success)">100%</span></div>
+      </div>
+
+      <div class="grid-2">
+        <div class="panel">
+          <h4>Overdue Aging</h4>
+          <p style="margin:0;">Buckets every overdue record's days-past-due (measured from the <em>driving milestone's</em> due date — the same one <a href="#precedence">§04</a> resolves) into 1–30 / 31–60 / 61–90 / 90+ days, plus the single oldest figure.</p>
+        </div>
+        <div class="panel">
+          <h4>Milestone Performance</h4>
+          <p style="margin:0;">Five stacked bars, one per milestone type, showing on-schedule vs. overdue rate <em>independent</em> of which milestone is currently driving the overall status — this is where an otherwise-hidden Corrections or Extension rate becomes visible.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="entry" id="grid">
+      <div class="entry-head"><span class="entry-num">06</span><h2>Detailed Data Grid</h2></div>
+      <p class="lede">A sortable, paginated table — ISB #, Workstation, Last Routing, Date Sent to Field, and the overall Status pill. Click any row to expand it into the five milestone badges from <a href="#milestones">§02</a>.</p>
+      <ul style="max-width:68ch; padding-left:1.2rem; margin:0.6rem 0;">
+        <li>Click a column header to sort by it; click again to reverse.</li>
+        <li>Page size is adjustable (10 / 25 / 50 / 100 rows).</li>
+        <li>Expansion state is remembered per ISB # while filtering, and determines what the Filtered CSV export includes for that row — see <a href="#export">§09</a>.</li>
+      </ul>
+    </section>
+
+    <section class="entry" id="reviewers">
+      <div class="entry-head"><span class="entry-num">07</span><h2>Reviewer Performance</h2></div>
+      <p class="lede">One row per reviewer: total incidents, on-schedule count, overdue count, compliance rate — each incident counted once by its <code>getComplianceBucket()</code> value, attributed to whichever reviewer is on the most recent routing event (see <a href="#import">§01</a>). Sortable by any column.</p>
+    </section>
+
+    <section class="entry" id="filters">
+      <div class="entry-head"><span class="entry-num">08</span><h2>Filters &amp; Search</h2></div>
+      <p class="lede">The sidebar filter panel appears once data is loaded, and applies across all three tabs at once.</p>
+      <div class="tbl-wrap">
+        <table class="ref">
+          <thead><tr><th>Control</th><th>Matches on</th></tr></thead>
+          <tbody>
+            <tr><td>Search Fields</td><td>ISB #, workstation, or reviewer (contains, case-insensitive)</td></tr>
+            <tr><td>Workstation / Command</td><td>Exact workstation match, populated from the loaded file</td></tr>
+            <tr><td>Action Plan / 3-Month / 6-Month / Corrections Required / Extension Applied</td><td>That milestone's own On-Schedule / Overdue / N/A status</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="note">Typing 3+ letters of "extended" into Search (e.g. <code>ext</code>) also surfaces any record with an Extended 3-Month or 6-Month assessment, on top of the normal field match. <span class="kw">Clear Filters</span> resets everything, including sort and page.</p>
+    </section>
+
+    <section class="entry" id="export">
+      <div class="entry-head"><span class="entry-num">09</span><h2>Exporting &amp; Sharing</h2></div>
+      <div class="grid-2">
+        <div class="panel">
+          <h4>Filtered CSV</h4>
+          <p style="margin:0;">Every currently-filtered record, one row each, plus a header block recording exactly which filters were active. Milestone due/completed/status columns are populated <strong>only for rows you expanded</strong> in the grid at export time — collapsed rows export blank there.</p>
+        </div>
+        <div class="panel">
+          <h4>Reviewer CSV</h4>
+          <p style="margin:0;">The Reviewer Performance table, exported with the same active-filters header block.</p>
+        </div>
+        <div class="panel">
+          <h4>Print / PDF</h4>
+          <p style="margin:0;">Triggers the browser print dialog; the stylesheet's print rules collapse charts to a single column and tighten spacing for paper.</p>
+        </div>
+        <div class="panel">
+          <h4>Export Dashboard</h4>
+          <p style="margin:0;">Bakes the currently loaded dataset into a new standalone HTML file, locked in <strong>read-only viewer mode</strong> — the importer is hidden, and a runtime integrity check every 2 seconds detects any attempt to tamper with the embedded-data lock and blanks the page if it's been altered. Hand this file to someone who needs to see the numbers but shouldn't be able to load a different file over them.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="entry" id="changelog">
+      <div class="entry-head"><span class="entry-num">10</span><h2>vXX_3_3 Changes</h2></div>
+      <p class="lede">What's different in this build relative to the plain On-Schedule/Overdue-only versions:</p>
+      <ul style="max-width:68ch; padding-left:1.2rem;">
+        <li><strong>Corrections Pending</strong> and <strong>Extension Applied</strong> added as their own tracked milestones and overall-status labels (§02–§04).</li>
+        <li>The <strong>Compliance Trend</strong> card was removed from the Overview tab — its month-over-month rate didn't reconcile with the Overall Compliance KPI tile and was retired rather than fixed in place.</li>
+        <li><strong>Workstation Volume &amp; Status</strong> now spans the full left column of the Overview grid (vertically, across both chart rows) to fill the space the Trend card left, instead of stretching Overdue Aging horizontally.</li>
+      </ul>
+    </section>
+
+  </main>
+</div>
+
+<footer class="colophon">Companion reference for AlertDashboard_vXX_3_3.html — reflects the logic in that file as written; if the dashboard changes, this manual should be regenerated against it.</footer>
+</body>
+</html>
