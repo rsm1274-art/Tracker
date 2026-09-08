@@ -472,31 +472,36 @@
       <div class="ladder">
         <div class="rung override">
           <span class="step">1</span>
-          <span class="rule-text">An <strong>open Corrections Required</strong> task (no completed date) always wins — regardless of any other milestone's due date. Shown as <span class="kw">Corrections Pending</span>.</span>
+          <span class="rule-text">An <strong>open Extension Applied</strong> task (present, no completed date) always wins — regardless of any other milestone's due date, and even over an open Corrections Required. Shown as <span class="kw">Extension Applied</span>. (Corrections aren't required again until the extension is revoked, so the two shouldn't be open at once in practice — but if they are, Extension wins.)</span>
           <span></span>
         </div>
-        <div class="rung">
+        <div class="rung override">
           <span class="step">2</span>
-          <span class="rule-text">Otherwise, sort every tracked (non-N/A) milestone by <strong>due date, earliest first</strong> — ties break Action Plan → 3-Month → 6-Month → Corrections → Extension.</span>
+          <span class="rule-text">Otherwise, an <strong>open Corrections Required</strong> task (no completed date) wins — regardless of any other remaining milestone's due date. Shown as <span class="kw">Corrections Pending</span>.</span>
           <span></span>
         </div>
         <div class="rung">
           <span class="step">3</span>
-          <span class="rule-text">The <strong>earliest incomplete</strong> milestone in that order drives the label. If it's Extension Applied, the record reads <span class="kw">Extension Applied</span>; otherwise it shows that milestone's own On-Schedule / Overdue status.</span>
+          <span class="rule-text">Otherwise, sort every tracked (non-N/A) milestone by <strong>due date, earliest first</strong> — ties break Action Plan → 3-Month → 6-Month → Corrections → Extension.</span>
           <span></span>
         </div>
         <div class="rung">
           <span class="step">4</span>
-          <span class="rule-text">If <strong>every</strong> tracked milestone is completed, the record shows the <strong>last</strong> (latest due date) one's own status — never the literal "Extension Applied" or "Corrections Pending" label, even if that milestone was the last one completed.</span>
+          <span class="rule-text">The <strong>earliest incomplete</strong> milestone in that order drives the label, showing that milestone's own On-Schedule / Overdue status. (Extension Applied can only reach this step already completed — an open one was already caught in step 1 — so it never drives the label here.)</span>
           <span></span>
         </div>
         <div class="rung">
           <span class="step">5</span>
-          <span class="rule-text">If <strong>no</strong> milestone has a due date at all, the record reads <span class="kw">N/A</span> — unless an Extension Applied task was recorded with no due date and no completion, in which case it still reads <span class="kw">Extension Applied</span>.</span>
+          <span class="rule-text">If <strong>every</strong> tracked milestone is completed, the record shows the <strong>last</strong> (latest due date) one's own status — never the literal "Extension Applied" or "Corrections Pending" label, even if that milestone was the last one completed.</span>
+          <span></span>
+        </div>
+        <div class="rung">
+          <span class="step">6</span>
+          <span class="rule-text">If <strong>no</strong> milestone has a due date at all, the record reads <span class="kw">N/A</span> — unless an Extension Applied task was recorded with no due date and no completion, in which case it still reads <span class="kw">Extension Applied</span> (same rule as step 1, just with nothing else tracked to compare against).</span>
           <span></span>
         </div>
       </div>
-      <div class="callout"><strong>Why a row doesn't show "Extension Applied" even though the source data has that task type:</strong> the extension task must be both incomplete and the earliest-due unfinished milestone. If the same incident has an open Corrections Required task, or an earlier-due incomplete Action Plan / 3-Month / 6-Month, that takes precedence. And a <em>completed</em> extension is skipped like any finished milestone — it only drives the label while still open.</div>
+      <div class="callout"><strong>Why a row doesn't show "Extension Applied" even though the source data has that task type:</strong> the extension task must still be open — a <em>completed</em> extension is skipped like any finished milestone and falls through to normal sequencing (steps 3–5). An open extension, though, wins outright: it no longer needs to be the earliest-due unfinished milestone, and it overrides even an open Corrections Required.</div>
       <p class="note">Charts and KPI tiles use a related but separate helper, <code>getComplianceBucket()</code> — it reduces "Corrections Pending" and "Extension Applied" back down to their own On-Schedule/Overdue value for counting, so those records still count toward compliance rates by their own due date even though the grid shows a neutral label.</p>
     </section>
 
@@ -595,6 +600,8 @@
         <li><strong>Workstation Volume &amp; Status</strong> now spans the full left column of the Overview grid (vertically, across both chart rows) to fill the space the Trend card left, instead of stretching Overdue Aging horizontally.</li>
         <li>The <strong>Overdue Aging</strong> card's "Oldest" ISB # is now a clickable link to that record in the Detailed Data Grid (§05).</li>
         <li><strong>Export Dashboard</strong>'s downloaded filename now reads <code>Alert_PEP_Compliance_&lt;date&gt;.html</code> (previously <code>Compliance_Dashboard_&lt;date&gt;.html</code>).</li>
+        <li>Overall-status precedence changed: an <strong>open Extension Applied</strong> now overrides everything, including an open Corrections Required (previously Corrections always won outright and Extension only surfaced when it was the earliest-incomplete milestone in normal sequencing) — see §04.</li>
+        <li>The masthead logo in the dashboard header now shows the actual <strong>Memphis Police Department seal</strong> image in place of the hand-drawn shield/star icon.</li>
       </ul>
     </section>
 
