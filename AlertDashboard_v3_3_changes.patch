@@ -1,0 +1,127 @@
+diff --git a/AlertDashboard_vXX_3_3.html b/AlertDashboard_vXX_3_3.html
+index 6fde82c..859eebf 100644
+--- a/AlertDashboard_vXX_3_3.html
++++ b/AlertDashboard_vXX_3_3.html
+@@ -334,6 +334,14 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
+   .aging-count { font-size: 0.82rem; font-weight: 700; color: var(--ink); text-align: right; font-variant-numeric: tabular-nums; }
+   .aging-foot { margin-top: 0.85rem; padding-top: 0.7rem; border-top: 1px solid var(--rule); font-size: 0.66rem; color: var(--ink-faint); display: flex; justify-content: space-between; }
+   .aging-foot strong { color: var(--danger); font-weight: 700; }
++  .aging-oldest-link { background: none; border: none; padding: 0; margin: 0; font: inherit; color: inherit; cursor: pointer; }
++  .aging-oldest-link:hover .aging-isb, .aging-oldest-link:focus-visible .aging-isb { text-decoration-color: currentColor; }
++  .aging-isb { color: var(--mpd-blue); font-weight: 700; text-decoration: underline; text-decoration-color: transparent; transition: text-decoration-color 0.15s ease; }
++  @keyframes rowJumpFlash {
++    0%, 100% { background: transparent; }
++    25%, 75% { background: rgba(176, 102, 90, 0.22); }
++  }
++  tr.record-row.jump-flash { animation: rowJumpFlash 1.6s ease; }
+ 
+   /* ---------- Milestone stage bars ---------- */
+   .stage-list { display: flex; flex-direction: column; gap: 1rem; }
+@@ -1769,13 +1777,13 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
+         { label: 'Over 90 days',      min: 91, max: Infinity, n: 0, shade: '#79231a' },
+       ];
+ 
+-      let counted = 0, worst = 0;
++      let counted = 0, worst = 0, worstItem = null;
+       state.data.forEach(item => {
+         if (getComplianceBucket(item) !== 'Overdue') return;
+         const d = getOverdueDays(item);
+         if (d === null) return;
+         counted++;
+-        if (d > worst) worst = d;
++        if (d > worst) { worst = d; worstItem = item; }
+         const b = buckets.find(x => d >= x.min && d <= x.max);
+         if (b) b.n++;
+       });
+@@ -1796,12 +1804,40 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
+               + `</div>`;
+       });
+       html += '</div>';
+-      html += `<div class="aging-foot"><span><strong>${counted}</strong> overdue</span><span>Oldest: <strong>${worst}</strong> days past due</span></div>`;
++      const oldestBit = worstItem
++        ? `<span>Oldest: <strong>${worst}</strong> days past due &mdash; <button type="button" class="aging-oldest-link" data-jump-isb="${escapeHtml(worstItem.isb)}"><span class="aging-isb">${escapeHtml(worstItem.isb)}</span></button></span>`
++        : `<span>Oldest: <strong>${worst}</strong> days past due</span>`;
++      html += `<div class="aging-foot"><span><strong>${counted}</strong> overdue</span>${oldestBit}</div>`;
+       host.innerHTML = html;
+ 
+       requestAnimationFrame(() => requestAnimationFrame(() => {
+         host.querySelectorAll('.aging-fill').forEach(el => { el.style.width = el.dataset.target + '%'; });
+       }));
++
++      const jumpBtn = host.querySelector('[data-jump-isb]');
++      if (jumpBtn) jumpBtn.onclick = () => jumpToRecord(jumpBtn.dataset.jumpIsb);
++    }
++
++    // Switches to the Detailed Data Grid tab, pages to and expands the given record,
++    // then scrolls it into view with a brief highlight. Used by the Overdue Aging
++    // card's "Oldest" link so command staff can jump straight to that incident.
++    function jumpToRecord(isb) {
++      const idx = state.data.findIndex(item => item.isb === isb);
++      if (idx === -1) {
++        showNotification('That record is outside the current filter selection.', 'error');
++        return;
++      }
++      state.page = Math.floor(idx / state.pageSize) + 1;
++      state.expandedRows.add(isb);
++      setTab('table');
++      renderTable();
++      requestAnimationFrame(() => {
++        const row = document.querySelector(`tr.record-row[data-isb="${CSS.escape(isb)}"]`);
++        if (!row) return;
++        row.scrollIntoView({ behavior: 'smooth', block: 'center' });
++        row.classList.add('jump-flash');
++        row.addEventListener('animationend', () => row.classList.remove('jump-flash'), { once: true });
++      });
+     }
+ 
+     // ---------- Milestone performance ----------
+@@ -2269,7 +2305,7 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
+       if (state.rawData.length === 0) return showNotification('No data loaded to export.', 'error');
+       const sourceHtml = getCleanExportHtml(true);
+       const blob = new Blob([sourceHtml], { type: 'text/html;charset=utf-8;' });
+-      const link = document.createElement('a'); link.href = URL.createObjectURL(blob); link.setAttribute('download', `Compliance_Dashboard_${new Date().toISOString().split('T')[0]}.html`);
++      const link = document.createElement('a'); link.href = URL.createObjectURL(blob); link.setAttribute('download', `Alert_PEP_Compliance_${new Date().toISOString().split('T')[0]}.html`);
+       document.body.appendChild(link); link.click(); document.body.removeChild(link);
+       showNotification('Read-only Compliance Dashboard exported!', 'success');
+     }
+diff --git a/Compliance_Dashboard_Manual.html b/Compliance_Dashboard_Manual.html
+index bfa1cbf..e576158 100644
+--- a/Compliance_Dashboard_Manual.html
++++ b/Compliance_Dashboard_Manual.html
+@@ -524,7 +524,7 @@
+       <div class="grid-2">
+         <div class="panel">
+           <h4>Overdue Aging</h4>
+-          <p style="margin:0;">Buckets every overdue record's days-past-due (measured from the <em>driving milestone's</em> due date — the same one <a href="#precedence">§04</a> resolves) into 1–30 / 31–60 / 61–90 / 90+ days, plus the single oldest figure.</p>
++          <p style="margin:0;">Buckets every overdue record's days-past-due (measured from the <em>driving milestone's</em> due date — the same one <a href="#precedence">§04</a> resolves) into 1–30 / 31–60 / 61–90 / 90+ days, plus the single oldest figure. That ISB # is a link: clicking it switches to the Detailed Data Grid, pages to and expands that record, and briefly highlights the row. If the record has since fallen outside the active filters, a notification says so instead of jumping to a dead row.</p>
+         </div>
+         <div class="panel">
+           <h4>Milestone Performance</h4>
+@@ -593,6 +593,8 @@
+         <li><strong>Corrections Pending</strong> and <strong>Extension Applied</strong> added as their own tracked milestones and overall-status labels (§02–§04).</li>
+         <li>The <strong>Compliance Trend</strong> card was removed from the Overview tab — its month-over-month rate didn't reconcile with the Overall Compliance KPI tile and was retired rather than fixed in place.</li>
+         <li><strong>Workstation Volume &amp; Status</strong> now spans the full left column of the Overview grid (vertically, across both chart rows) to fill the space the Trend card left, instead of stretching Overdue Aging horizontally.</li>
++        <li>The <strong>Overdue Aging</strong> card's "Oldest" ISB # is now a clickable link to that record in the Detailed Data Grid (§05).</li>
++        <li><strong>Export Dashboard</strong>'s downloaded filename now reads <code>Alert_PEP_Compliance_&lt;date&gt;.html</code> (previously <code>Compliance_Dashboard_&lt;date&gt;.html</code>).</li>
+       </ul>
+     </section>
+ 
+diff --git a/HANDOFF.md b/HANDOFF.md
+index cff7909..5413c7e 100644
+--- a/HANDOFF.md
++++ b/HANDOFF.md
+@@ -74,6 +74,14 @@ The "Critical Overdue" tile was renamed to "Total Overdue" ("Past scheduled due
+ 
+ In the Filtered CSV export, `Overall Status` sits right after `Last Routing`: `ISB Number, Workstation, Last Routing, Overall Status, Date Created, Date Sent To Field, [milestone detail columns...]`. The on-screen grid's column layout is unchanged — this only affects the CSV export.
+ 
++### Overdue Aging "Oldest" is now a link to that record
++
++The Overdue Aging card's footer already showed the single oldest overdue record's days-past-due figure (via `getDrivingMilestone`/`getOverdueDays`, which mirror `getOverallStatus()`'s milestone selection — this was already correct and needed no change). It now also shows that record's ISB # as a button. Clicking it (`jumpToRecord(isb)`) switches to the Detailed Data Grid tab, pages to and expands the record, scrolls it into view, and briefly flashes the row (`.jump-flash` / `rowJumpFlash` keyframe). If the record has fallen outside the currently active filters (`state.data`), it shows a notification instead of jumping to nothing.
++
++### Export Dashboard filename
++
++`exportStandaloneDashboard()`'s downloaded file now reads `Alert_PEP_Compliance_<date>.html`, previously `Compliance_Dashboard_<date>.html`.
++
+ ## Design decisions worth knowing before extending this further
+ 
+ - **`getOverallStatus(item)`** is the single source of truth for a record's displayed status. Order of evaluation: (1) if no milestone has a real value, return `'N/A'` unless Extension Applied was recorded with no due date, in which case return `'Extension Applied'`; (2) if Corrections Required is incomplete, unconditionally return `'Corrections Pending'`; (3) otherwise, the earliest-incomplete milestone by due date drives the result (tie-break order: Action Plan → 3-Month → 6-Month → Corrections → Extension); if every milestone is complete, the last-due one represents the record.

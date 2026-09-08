@@ -74,6 +74,14 @@ The "Critical Overdue" tile was renamed to "Total Overdue" ("Past scheduled due 
 
 In the Filtered CSV export, `Overall Status` sits right after `Last Routing`: `ISB Number, Workstation, Last Routing, Overall Status, Date Created, Date Sent To Field, [milestone detail columns...]`. The on-screen grid's column layout is unchanged — this only affects the CSV export.
 
+### Overdue Aging "Oldest" is now a link to that record
+
+The Overdue Aging card's footer already showed the single oldest overdue record's days-past-due figure (via `getDrivingMilestone`/`getOverdueDays`, which mirror `getOverallStatus()`'s milestone selection — this was already correct and needed no change). It now also shows that record's ISB # as a button. Clicking it (`jumpToRecord(isb)`) switches to the Detailed Data Grid tab, pages to and expands the record, scrolls it into view, and briefly flashes the row (`.jump-flash` / `rowJumpFlash` keyframe). If the record has fallen outside the currently active filters (`state.data`), it shows a notification instead of jumping to nothing.
+
+### Export Dashboard filename
+
+`exportStandaloneDashboard()`'s downloaded file now reads `Alert_PEP_Compliance_<date>.html`, previously `Compliance_Dashboard_<date>.html`.
+
 ## Design decisions worth knowing before extending this further
 
 - **`getOverallStatus(item)`** is the single source of truth for a record's displayed status. Order of evaluation: (1) if no milestone has a real value, return `'N/A'` unless Extension Applied was recorded with no due date, in which case return `'Extension Applied'`; (2) if Corrections Required is incomplete, unconditionally return `'Corrections Pending'`; (3) otherwise, the earliest-incomplete milestone by due date drives the result (tie-break order: Action Plan → 3-Month → 6-Month → Corrections → Extension); if every milestone is complete, the last-due one represents the record.

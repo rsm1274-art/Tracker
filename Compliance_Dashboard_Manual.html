@@ -524,7 +524,7 @@
       <div class="grid-2">
         <div class="panel">
           <h4>Overdue Aging</h4>
-          <p style="margin:0;">Buckets every overdue record's days-past-due (measured from the <em>driving milestone's</em> due date — the same one <a href="#precedence">§04</a> resolves) into 1–30 / 31–60 / 61–90 / 90+ days, plus the single oldest figure.</p>
+          <p style="margin:0;">Buckets every overdue record's days-past-due (measured from the <em>driving milestone's</em> due date — the same one <a href="#precedence">§04</a> resolves) into 1–30 / 31–60 / 61–90 / 90+ days, plus the single oldest figure. That ISB # is a link: clicking it switches to the Detailed Data Grid, pages to and expands that record, and briefly highlights the row. If the record has since fallen outside the active filters, a notification says so instead of jumping to a dead row.</p>
         </div>
         <div class="panel">
           <h4>Milestone Performance</h4>
@@ -593,6 +593,8 @@
         <li><strong>Corrections Pending</strong> and <strong>Extension Applied</strong> added as their own tracked milestones and overall-status labels (§02–§04).</li>
         <li>The <strong>Compliance Trend</strong> card was removed from the Overview tab — its month-over-month rate didn't reconcile with the Overall Compliance KPI tile and was retired rather than fixed in place.</li>
         <li><strong>Workstation Volume &amp; Status</strong> now spans the full left column of the Overview grid (vertically, across both chart rows) to fill the space the Trend card left, instead of stretching Overdue Aging horizontally.</li>
+        <li>The <strong>Overdue Aging</strong> card's "Oldest" ISB # is now a clickable link to that record in the Detailed Data Grid (§05).</li>
+        <li><strong>Export Dashboard</strong>'s downloaded filename now reads <code>Alert_PEP_Compliance_&lt;date&gt;.html</code> (previously <code>Compliance_Dashboard_&lt;date&gt;.html</code>).</li>
       </ul>
     </section>
 

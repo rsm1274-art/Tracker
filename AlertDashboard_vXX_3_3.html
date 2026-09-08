@@ -334,6 +334,14 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
   .aging-count { font-size: 0.82rem; font-weight: 700; color: var(--ink); text-align: right; font-variant-numeric: tabular-nums; }
   .aging-foot { margin-top: 0.85rem; padding-top: 0.7rem; border-top: 1px solid var(--rule); font-size: 0.66rem; color: var(--ink-faint); display: flex; justify-content: space-between; }
   .aging-foot strong { color: var(--danger); font-weight: 700; }
+  .aging-oldest-link { background: none; border: none; padding: 0; margin: 0; font: inherit; color: inherit; cursor: pointer; }
+  .aging-oldest-link:hover .aging-isb, .aging-oldest-link:focus-visible .aging-isb { text-decoration-color: currentColor; }
+  .aging-isb { color: var(--mpd-blue); font-weight: 700; text-decoration: underline; text-decoration-color: transparent; transition: text-decoration-color 0.15s ease; }
+  @keyframes rowJumpFlash {
+    0%, 100% { background: transparent; }
+    25%, 75% { background: rgba(176, 102, 90, 0.22); }
+  }
+  tr.record-row.jump-flash { animation: rowJumpFlash 1.6s ease; }
 
   /* ---------- Milestone stage bars ---------- */
   .stage-list { display: flex; flex-direction: column; gap: 1rem; }
@@ -1769,13 +1777,13 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
         { label: 'Over 90 days',      min: 91, max: Infinity, n: 0, shade: '#79231a' },
       ];
 
-      let counted = 0, worst = 0;
+      let counted = 0, worst = 0, worstItem = null;
       state.data.forEach(item => {
         if (getComplianceBucket(item) !== 'Overdue') return;
         const d = getOverdueDays(item);
         if (d === null) return;
         counted++;
-        if (d > worst) worst = d;
+        if (d > worst) { worst = d; worstItem = item; }
         const b = buckets.find(x => d >= x.min && d <= x.max);
         if (b) b.n++;
       });
@@ -1796,12 +1804,40 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
               + `</div>`;
       });
       html += '</div>';
-      html += `<div class="aging-foot"><span><strong>${counted}</strong> overdue</span><span>Oldest: <strong>${worst}</strong> days past due</span></div>`;
+      const oldestBit = worstItem
+        ? `<span>Oldest: <strong>${worst}</strong> days past due &mdash; <button type="button" class="aging-oldest-link" data-jump-isb="${escapeHtml(worstItem.isb)}"><span class="aging-isb">${escapeHtml(worstItem.isb)}</span></button></span>`
+        : `<span>Oldest: <strong>${worst}</strong> days past due</span>`;
+      html += `<div class="aging-foot"><span><strong>${counted}</strong> overdue</span>${oldestBit}</div>`;
       host.innerHTML = html;
 
       requestAnimationFrame(() => requestAnimationFrame(() => {
         host.querySelectorAll('.aging-fill').forEach(el => { el.style.width = el.dataset.target + '%'; });
       }));
+
+      const jumpBtn = host.querySelector('[data-jump-isb]');
+      if (jumpBtn) jumpBtn.onclick = () => jumpToRecord(jumpBtn.dataset.jumpIsb);
+    }
+
+    // Switches to the Detailed Data Grid tab, pages to and expands the given record,
+    // then scrolls it into view with a brief highlight. Used by the Overdue Aging
+    // card's "Oldest" link so command staff can jump straight to that incident.
+    function jumpToRecord(isb) {
+      const idx = state.data.findIndex(item => item.isb === isb);
+      if (idx === -1) {
+        showNotification('That record is outside the current filter selection.', 'error');
+        return;
+      }
+      state.page = Math.floor(idx / state.pageSize) + 1;
+      state.expandedRows.add(isb);
+      setTab('table');
+      renderTable();
+      requestAnimationFrame(() => {
+        const row = document.querySelector(`tr.record-row[data-isb="${CSS.escape(isb)}"]`);
+        if (!row) return;
+        row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        row.classList.add('jump-flash');
+        row.addEventListener('animationend', () => row.classList.remove('jump-flash'), { once: true });
+      });
     }
 
     // ---------- Milestone performance ----------
@@ -2269,7 +2305,7 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
       if (state.rawData.length === 0) return showNotification('No data loaded to export.', 'error');
       const sourceHtml = getCleanExportHtml(true);
       const blob = new Blob([sourceHtml], { type: 'text/html;charset=utf-8;' });
-      const link = document.createElement('a'); link.href = URL.createObjectURL(blob); link.setAttribute('download', `Compliance_Dashboard_${new Date().toISOString().split('T')[0]}.html`);
+      const link = document.createElement('a'); link.href = URL.createObjectURL(blob); link.setAttribute('download', `Alert_PEP_Compliance_${new Date().toISOString().split('T')[0]}.html`);
       document.body.appendChild(link); link.click(); document.body.removeChild(link);
       showNotification('Read-only Compliance Dashboard exported!', 'success');
     }
