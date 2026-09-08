@@ -1277,6 +1277,20 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
       // A completed milestone is skipped -- the reviewer has moved past it, even if it was
       // completed late. When every tracked milestone is completed, the last one
       // (newest due date) represents the incident.
+      //
+      // Precedence, checked in order: an open Extension Applied outranks everything
+      // (including an open Corrections Required -- see below), then an open Corrections
+      // Required outranks the normal earliest-incomplete sequencing, then sequencing.
+
+      // An open Extension Applied means the deadline itself has been pushed -- that
+      // outranks every other milestone's own due-date urgency, and it outranks an open
+      // Corrections Required too: corrections aren't required again until the extension
+      // is revoked/expires. (Open Extension + open Corrections shouldn't co-occur in
+      // practice, but if it does, Extension wins.) Checked unconditionally, before the
+      // milestones array below is even built, since extFound can be true with no due
+      // date at all (extStatus would read N/A and be filtered out).
+      if (item.extFound && !item.extComp) return 'Extension Applied';
+
       const milestones = [
         { idx: 0, due: parseDate(item.apDue),    comp: parseDate(item.apComp),    status: item.apStatus },
         { idx: 1, due: parseDate(item.threeDue), comp: parseDate(item.threeComp), status: item.threeStatus },
@@ -1285,21 +1299,14 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
         { idx: 4, due: parseDate(item.extDue),   comp: parseDate(item.extComp),   status: item.extStatus },
       ].filter(m => m.status && m.status !== 'N/A');
 
-      if (milestones.length === 0) {
-        // No dated/valued milestone was tracked at all -- ordinarily "N/A". But an
-        // Extension Applied task recorded with no due date of its own (extStatus reads
-        // N/A and gets filtered out above, same as everything else here) still means
-        // something concrete happened on this record, so it overrides the bare N/A.
-        if (item.extFound && !item.extComp) return 'Extension Applied';
-        return 'N/A';
-      }
+      if (milestones.length === 0) return 'N/A';
 
       // An open Corrections Required task means a submission was already reviewed and sent
-      // back for rework -- that outranks every other milestone's own due-date urgency,
-      // since the record can't move forward until the correction is resolved. It overrides
-      // the label unconditionally while open, even if an earlier milestone (e.g. 6-Month)
-      // is separately overdue. It still counts toward compliance by its own due date (see
-      // getComplianceBucket) -- only the displayed label is neutral.
+      // back for rework -- that outranks every other remaining milestone's own due-date
+      // urgency, since the record can't move forward until the correction is resolved. It
+      // overrides the label unconditionally while open, even if an earlier milestone (e.g.
+      // 6-Month) is separately overdue. It still counts toward compliance by its own due
+      // date (see getComplianceBucket) -- only the displayed label is neutral.
       const corrections = milestones.find(m => m.idx === 3);
       if (corrections && !corrections.comp) return 'Corrections Pending';
 
@@ -1308,14 +1315,10 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
       milestones.sort((a, b) => (dueKey(a) - dueKey(b)) || (a.idx - b.idx));
 
       // Earliest incomplete milestone drives the status; otherwise the last completed one.
+      // Extension Applied can only reach this point already completed (an open one
+      // returned above), so no idx===4 special case is needed here.
       const active = milestones.find(m => !m.comp);
       if (!active) return milestones[milestones.length - 1].status;
-
-      // Extension Applied participates in the normal earliest-incomplete sequencing (unlike
-      // Corrections Required, it doesn't block or override anything) -- it just carries its
-      // own distinct label and color when it happens to be the milestone currently driving
-      // the record. Still counts toward compliance by its own due date (getComplianceBucket).
-      if (active.idx === 4) return 'Extension Applied';
       return active.status;
     }
 
